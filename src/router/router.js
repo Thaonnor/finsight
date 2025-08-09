@@ -10,6 +10,21 @@ const routes = [
         name: 'Dashboard',
         component: () => import('../views/Dashboard.vue'),
     },
+    {
+        path: '/accounts',
+        name: 'Accounts',
+        component: () => import('../views/Accounts.vue'),
+    },
+    {
+        path: '/categories',
+        name: 'Categories',
+        component: () => import('../views/Categories.vue'),
+    },
+    {
+        path: '/import',
+        name: 'Import',
+        component: () => import('../views/Import.vue'),
+    }
 ];
 
 /**

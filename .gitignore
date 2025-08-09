@@ -2,6 +2,9 @@
 node_modules/
 dist/
 
+# Generated documentation
+docs/
+
 # Rust
 src-tauri/target/
 

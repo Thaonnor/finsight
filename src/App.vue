@@ -1,7 +1,7 @@
 <template>
     <div>
         <h1>finsight</h1>
-        <p>Personal finance tracking app</p>
+        <router-view />
     </div>
 </template>
 

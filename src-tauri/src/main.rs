@@ -7,6 +7,7 @@
 //! into business-style financial statements and insights.
 
 mod database;
+use sqlx::SqlitePool;
 
 /// Main entry point for the finsight Tauri application.
 ///
@@ -33,11 +34,29 @@ mod database;
 #[tokio::main]
 async fn main() {
     // Initialize the database
-    let _db_pool = database::init_db()
+    let db_pool = database::init_db()
         .await
         .expect("Failed to initialize database");
 
     tauri::Builder::default()
+        .manage(db_pool)
+        .invoke_handler(tauri::generate_handler![get_accounts])
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");
+}
+
+/// Fetch all accounts from the database
+///
+/// # Arguments
+///
+/// * `db` - Database connection pool from Tauri's managed state
+///
+/// # Returns
+///
+/// A vector of account data as JSON-serializable values
+#[tauri::command]
+async fn get_accounts(db: tauri::State<'_, SqlitePool>) -> Result<Vec<serde_json::Value>, String> {
+    database::get_all_accounts(&*db)
+        .await
+        .map_err(|e| e.to_string())
 }

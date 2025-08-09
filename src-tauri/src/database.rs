@@ -2,7 +2,7 @@
 //!
 //! Handles SQLite database initialization and basic operations.
 
-use sqlx::{Pool, Sqlite, SqlitePool, sqlite::SqliteConnectOptions};
+use sqlx::{Pool, Sqlite, SqlitePool, sqlite::SqliteConnectOptions, Row};
 use std::str::FromStr;
 
 /// Initialize the SQLite database connection pool
@@ -56,24 +56,24 @@ pub async fn init_db() -> Result<Pool<Sqlite>, sqlx::Error> {
 /// accounts table for storing user financial accounts.
 ///
 /// # Arguments
-/// 
+///
 /// * `pool` - A reference to the SQLite connection pool
-/// 
+///
 /// # Returns
 ///
 /// * `Ok(())` - All tables created successfully (unit type means "success, no data")
 /// * `Err(sqlx::Error)` - Table creation failed
-/// 
+///
 /// # Errors
-/// 
+///
 /// This function will return an error if:
 /// * SQL syntax in table creation queries is invalid
 /// * Database file is read-only or corrupted
 /// * Insufficient disk space for table creation
 /// * Database connection is lost during table creation
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```no_run
 /// let pool = SqlitePool::connect("sqlite::test.db").await?;
 /// create_tables(&pool).await?;
@@ -92,4 +92,31 @@ async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .await?;
 
     Ok(())
+}
+
+/// Fetch all accounts from the database
+///
+/// # Arguments
+/// * `pool` - Database connection pool reference
+///
+/// # Returns
+/// * `Ok(Vec<serde_json::Value>)` - List of accounts as JSON objects
+/// * `Err(sqlx::Error)` - Database query error
+pub async fn get_all_accounts(pool: &SqlitePool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    let accounts = sqlx::query("SELECT id, name, account_type, created_at FROM accounts")
+        .fetch_all(pool)
+        .await?;
+
+    let result: Vec<serde_json::Value> = accounts
+        .into_iter()
+        .map(|row| {
+            serde_json::json!({
+                "id": row.get::<i64, _>("id"),
+                "name": row.get::<String, _>("name"),
+                "account_type": row.get::<String, _>("account_type")
+            })
+        })
+        .collect();
+
+    Ok(result)
 }

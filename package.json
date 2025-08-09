@@ -6,7 +6,8 @@
         "dev": "vite",
         "build": "vite build",
         "tauri": "tauri",
-        "tauri:dev": "tauri dev"
+        "tauri:dev": "tauri dev",
+        "docs": "cargo doc --manifest-path src-tauri/Cargo.toml --no-deps --open"
     },
     "dependencies": {
         "vue": "^3.4.0",

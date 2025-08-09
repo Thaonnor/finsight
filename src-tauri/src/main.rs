@@ -12,6 +12,24 @@ mod database;
 ///
 /// Initializes and runs the Tauri app with default configuration.
 /// The app will display a webview containing the Vue.js frontend.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// * Database initialization fails (file permissions, disk space, etc.)
+/// * Tauri application fails to start (missing dependencies, display issues)
+///
+/// # Panics
+///
+/// Panics if Tauri context generation fails, which indicates a build configuration problem.
+///
+/// # Examples
+///
+/// This function is called automatically when the application starts:
+/// ```no_run
+/// // Called by the Rust runtime when app launches
+/// main().await;
+/// ```
 #[tokio::main]
 async fn main() {
     // Initialize the database

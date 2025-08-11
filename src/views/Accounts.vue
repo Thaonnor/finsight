@@ -9,7 +9,8 @@
                     {{ account.name }} ({{ account.account_type }})
                 </li>
             </ul>
-            <AddAccountModal />
+            <button @click="showModal = true">Add Account</button>
+            <AddAccountModal v-if="showModal" />
         </div>
     </div>
 </template>
@@ -21,6 +22,7 @@
 
     const accounts = ref([]);
     const loading = ref(true);
+    const showModal = ref(false);
 
     const loadAccounts = async () => {
         try {

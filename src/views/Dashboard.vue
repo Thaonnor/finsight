@@ -4,8 +4,6 @@
         <p>Financial overview coming soon...</p>
     </div>
 </template>
-<script>
-export default {
-    name: 'Dashboard'
-}
+
+<script setup>
 </script>

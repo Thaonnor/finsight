@@ -5,8 +5,5 @@
     </div>
 </template>
 
-<script>
-    export default {
-        name: 'Import',
-    };
+<script setup>
 </script>

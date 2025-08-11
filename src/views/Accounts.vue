@@ -9,6 +9,7 @@
                     {{ account.name }} ({{ account.account_type }})
                 </li>
             </ul>
+            <AddAccountModal />
         </div>
     </div>
 </template>
@@ -16,9 +17,11 @@
 <script>
     import { invoke } from '@tauri-apps/api/core';
     import { ref, onMounted } from 'vue';
+    import AddAccountModal from '../components/AddAccountModal.vue';
 
     export default {
         name: 'Accounts',
+        components: { AddAccountModal },
         setup() {
             const accounts = ref([]);
             const loading = ref(true);

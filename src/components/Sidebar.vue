@@ -17,14 +17,13 @@
 <style scoped>
 .sidebar {
     width: 200px;
-    background: var(--color-background-secondary);
-    color: var(--color-text);
+    background: var(--surface-2);
+    color: var(--text);
     padding: 20px;
 }
 
 .sidebar h1 {
-    color: var(--color-accent);
-    font-size: var(--font-size-page-title);
+    color: var(--accent);
 }
 
 .sidebar ul {
@@ -37,11 +36,16 @@
 }
 
 .sidebar a {
-    color: var(--color-text);
+    color: var(--text);
     text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    display: block;
+    transition: background-color 0.2s ease;
 }
 
 .sidebar a:hover {
-    color: var(--color-accent);
+    color: var(--accent);
+    background: var(--surface-1);
 }
 </style>

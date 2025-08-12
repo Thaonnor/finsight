@@ -1,25 +1,57 @@
 :root {
-    /* Base Colors */
-    --color-background: #222831;
-    --color-background-secondary: #393E46; /* Cards, modals, elevated surfaces */
-    --color-text: #EEEEEE;
-    --color-accent: #00ADB5; /* Links, highlights, interactive elements */
+    /* base colors */
+    --bg: #18191B;
+    --surface-1: #2C2D30;
+    --surface-2: #3b3C40;
 
-    /* Financial/Status Colors */
-    --color-success: #10B981; /* Positive amounts, success states */
-    --color-warning: #F59E0B; /* Pending transactions, warnings */
-    --color-error: #F87171; /* Negative amounts, errors */
+    /* text colors */
+    --text: #EDEDED;
+    --text-dim: #A7AAAE;
+    --text-disabled: #636569;
 
-    /* Typography */
-    --font-family: 'Inter', sans-serif;
-    --font-size-page-title: 24px;
-    --font-size-section-heading: 20px;
-    --font-size-body: 16px;
-    --font-size-small: 14px;
-    --font-size-tiny: 12px;
+    /* accent */
+    --accent: #23B4D8;
+    --on-accent: #000000;
+
+    /* symantic */
+    --positive: #4CC38A;
+    --negative: #FF7A8A;
+    --warning: #F5B947;
 }
 
+/* base styling */
 body {
-    font-family: var(--font-family);
-
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    font-size: 16px;
 }
+
+/* typography */
+h1 {
+    font-size: 24px;
+    margin: 0 0 16px 0;
+}
+
+h2 {
+    font-size: 20px;
+    margin: 0 0 12px 0;
+}
+
+h3 {
+    font-size: 16px;
+    margin: 0 0 8px 0;
+}
+
+p {
+    font-size: 16px;
+    margin: 0 0 12px 0;
+}
+
+small {
+    font-size: 14px;
+    color: var(--text-dim);
+}
+
+

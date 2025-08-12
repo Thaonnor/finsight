@@ -14,11 +14,6 @@
 </script>
 
 <style>
-    body {
-        margin: 0;
-        font-family: system-ui, -apple-system, sans-serif;
-    }
-
     .layout {
         display: flex;
         height: 100vh;

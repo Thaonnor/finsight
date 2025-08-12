@@ -1,0 +1,25 @@
+:root {
+    /* Base Colors */
+    --color-background: #222831;
+    --color-background-secondary: #393E46; /* Cards, modals, elevated surfaces */
+    --color-text: #EEEEEE;
+    --color-accent: #00ADB5; /* Links, highlights, interactive elements */
+
+    /* Financial/Status Colors */
+    --color-success: #10B981; /* Positive amounts, success states */
+    --color-warning: #F59E0B; /* Pending transactions, warnings */
+    --color-error: #F87171; /* Negative amounts, errors */
+
+    /* Typography */
+    --font-family: 'Inter', sans-serif;
+    --font-size-page-title: 24px;
+    --font-size-section-heading: 20px;
+    --font-size-body: 16px;
+    --font-size-small: 14px;
+    --font-size-tiny: 12px;
+}
+
+body {
+    font-family: var(--font-family);
+    
+}

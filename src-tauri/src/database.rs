@@ -2,7 +2,7 @@
 //!
 //! Handles SQLite database initialization and basic operations.
 
-use sqlx::{Pool, Sqlite, SqlitePool, sqlite::SqliteConnectOptions, Row};
+use sqlx::{Pool, Row, Sqlite, SqlitePool, sqlite::SqliteConnectOptions};
 use std::str::FromStr;
 
 /// Initialize the SQLite database connection pool
@@ -119,4 +119,31 @@ pub async fn get_all_accounts(pool: &SqlitePool) -> Result<Vec<serde_json::Value
         .collect();
 
     Ok(result)
+}
+
+/// Adds a new account to the database.
+/// 
+/// Creates a new account record with the provided name and type. The `created_at` timestamp is automatically set by the database using CURRENT_TIMESTAMP.
+/// 
+/// # Arguments
+/// 
+/// * `pool` - A reference to the SQLite connection pool
+/// * `name` - The display name for the account (e.g., "Chase Checking")
+/// * `account_type` - The type of account ("checking" or "savings")
+/// 
+/// # Returns
+/// 
+/// Returns `Ok(())` on successful insertion, or an `sqlx::Error` if the database operation fails. 
+pub async fn add_account(
+    pool: &SqlitePool,
+    name: String,
+    account_type: String,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("INSERT INTO accounts (name, account_type) VALUES (?, ?)")
+        .bind(name)
+        .bind(account_type)
+        .execute(pool)
+        .await?;
+
+    Ok(())
 }

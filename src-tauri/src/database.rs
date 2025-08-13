@@ -91,6 +91,22 @@ async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
+    sqlx::query(
+        r#"
+            CREATE TABLE IF NOT EXISTS transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL,
+                amount_cents INTEGER NOT NULL,
+                description TEXT NOT NULL,
+                transaction_date TEXT NOT NULL,
+                created_at TEXT DEFAULT (datetime('now')),
+                FOREIGN KEY (account_id) REFERENCES accounts(id)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
     Ok(())
 }
 
@@ -122,18 +138,18 @@ pub async fn get_all_accounts(pool: &SqlitePool) -> Result<Vec<serde_json::Value
 }
 
 /// Adds a new account to the database.
-/// 
+///
 /// Creates a new account record with the provided name and type. The `created_at` timestamp is automatically set by the database using CURRENT_TIMESTAMP.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `pool` - A reference to the SQLite connection pool
 /// * `name` - The display name for the account (e.g., "Chase Checking")
 /// * `account_type` - The type of account ("checking" or "savings")
-/// 
+///
 /// # Returns
-/// 
-/// Returns `Ok(())` on successful insertion, or an `sqlx::Error` if the database operation fails. 
+///
+/// Returns `Ok(())` on successful insertion, or an `sqlx::Error` if the database operation fails.
 pub async fn add_account(
     pool: &SqlitePool,
     name: String,
@@ -146,4 +162,35 @@ pub async fn add_account(
         .await?;
 
     Ok(())
+}
+
+/// Fetch all transactions for a specific account
+///
+/// # Arguments
+/// * `pool` - Database connection pool reference
+/// * `account_id` - The ID of the account to get transactions for
+///
+/// # Returns
+/// * `Ok(Vec<serde_json::Value>)` - List of transactions as JSON objects
+/// * `Err(sqlx::Error)` - Database query error
+pub async fn get_transactions_by_account(
+    pool: &SqlitePool,
+    account_id: i64,
+) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    let transactions = sqlx::query("SELECT id, account_id, amount_cents, description, transaction_date FROM transactions WHERE account_id = ?").bind(account_id).fetch_all(pool).await?;
+
+    let result: Vec<serde_json::Value> = transactions
+        .into_iter()
+        .map(|row| {
+            serde_json::json!({
+                "id": row.get::<i64, _>("id"),
+                "account_id": row.get::<i64, _>("account_id"),
+                "amount_cents": row.get::<i64, _>("amount_cents"),
+                "description": row.get::<String, _>("description"),
+                "transaction_date": row.get::<String, _>("transaction_date")
+            })
+        })
+        .collect();
+
+    Ok(result)
 }

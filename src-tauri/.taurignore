@@ -1,0 +1,4 @@
+finsight.db
+finsight.db-*
+*.db
+*.db-*

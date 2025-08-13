@@ -2,27 +2,33 @@
     <div class="modal-overlay">
         <div class="modal-content">
             <h2>Add Account</h2>
-            <form>
+            <form @submit="handleSubmit">
                 <div class="form-field">
                     <label for="accountName">Account Name</label>
                     <input
                         id="accountName"
+                        v-model="accountName"
                         type="text"
                         placeholder="e.g., Chase Checking"
                         autocomplete="off"
+                        required
                     />
                 </div>
 
                 <div class="form-field">
                     <label for="accountType">Account Type</label>
-                    <select id="accountType" autocomplete="off">
+                    <select
+                        id="accountType"
+                        v-model="accountType"
+                        autocomplete="off"
+                    >
                         <option value="checking">Checking</option>
                         <option value="savings">Savings</option>
                     </select>
                 </div>
 
                 <div class="form-actions">
-                    <button type="button">Cancel</button>
+                    <button type="button" @click="handleCancel">Cancel</button>
                     <button type="submit">Add Account</button>
                 </div>
             </form>
@@ -31,7 +37,40 @@
 </template>
 
 <script setup>
-    // Script will go here
+    import { ref } from 'vue';
+    import { invoke } from '@tauri-apps/api/core';
+
+    const emit = defineEmits(['close', 'accountAdded']);
+
+    const accountName = ref('');
+    const accountType = ref('checking');
+
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+
+        try {
+            console.log('accountName.value:', accountName.value);
+            console.log('accountType.value:', accountType.value);
+            console.log('Full object being sent:', {
+                name: accountName.value,
+                account_type: accountType.value,
+            });
+
+            await invoke('add_account', {
+                name: accountName.value,
+                accountType: accountType.value,
+            });
+
+            emit('accountAdded');
+            emit('close');
+        } catch (error) {
+            console.error('Failed to add account:', error);
+        }
+    };
+
+    const handleCancel = () => {
+        emit('close');
+    };
 </script>
 
 <style scoped>

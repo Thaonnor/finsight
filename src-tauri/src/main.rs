@@ -40,7 +40,7 @@ async fn main() {
 
     tauri::Builder::default()
         .manage(db_pool)
-        .invoke_handler(tauri::generate_handler![get_accounts])
+        .invoke_handler(tauri::generate_handler![get_accounts, add_account])
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");
 }
@@ -57,6 +57,28 @@ async fn main() {
 #[tauri::command]
 async fn get_accounts(db: tauri::State<'_, SqlitePool>) -> Result<Vec<serde_json::Value>, String> {
     database::get_all_accounts(&*db)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Add a new account to the database
+///
+/// #Arguments
+///
+/// * `db` - Database connection pool from Tauri's managed state
+/// * `name` - The account name (e.g., Chase Checking)
+/// * `account_type` - The account type ("checking" or "savings")
+///
+/// # Returns
+///
+/// Empty result on success, or error string on failure
+#[tauri::command]
+async fn add_account(
+    db: tauri::State<'_, SqlitePool>,
+    name: String,
+    account_type: String,
+) -> Result<(), String> {
+    database::add_account(&*db, name, account_type)
         .await
         .map_err(|e| e.to_string())
 }

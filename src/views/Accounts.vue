@@ -10,7 +10,7 @@
                 </li>
             </ul>
             <button @click="showModal = true">Add Account</button>
-            <AddAccountModal v-if="showModal" />
+            <AddAccountModal v-if="showModal" @close="showModal = false" @accountAdded="handleAccountAdded"/>
         </div>
     </div>
 </template>
@@ -35,4 +35,9 @@
     };
 
     onMounted(loadAccounts);
+
+    const handleAccountAdded = async () => {
+        await loadAccounts();
+        showModal.value = false;
+    }
 </script>

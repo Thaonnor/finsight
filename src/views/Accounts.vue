@@ -21,6 +21,7 @@
                 class="account-card"
                 v-for="account in accounts"
                 :key="account.id"
+                @click="navigateToAccount(account.id)"
             >
                 <h3>{{ account.name }}</h3>
                 <span class="account-type">{{ account.account_type }}</span>
@@ -39,10 +40,12 @@
     import { invoke } from '@tauri-apps/api/core';
     import { ref, onMounted } from 'vue';
     import AddAccountModal from '../components/AddAccountModal.vue';
+    import { useRouter } from 'vue-router';
 
     const accounts = ref([]);
     const loading = ref(true);
     const showModal = ref(false);
+    const router = useRouter();
 
     const loadAccounts = async () => {
         try {
@@ -59,6 +62,10 @@
     const handleAccountAdded = async () => {
         await loadAccounts();
         showModal.value = false;
+    };
+
+    const navigateToAccount = (accountId) => {
+        router.push(`/account/${accountId}`);
     };
 </script>
 
@@ -95,7 +102,8 @@
         opacity: 0.9;
     }
 
-    .loading-state, .empty-state {
+    .loading-state,
+    .empty-state {
         text-align: center;
         padding: 48px 24px;
         background: var(--surface-1);

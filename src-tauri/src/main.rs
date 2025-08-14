@@ -40,7 +40,12 @@ async fn main() {
 
     tauri::Builder::default()
         .manage(db_pool)
-        .invoke_handler(tauri::generate_handler![get_accounts, add_account])
+        .invoke_handler(tauri::generate_handler![
+            get_accounts,
+            add_account,
+            get_transactions_by_account,
+            add_transaction
+        ])
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");
 }
@@ -81,4 +86,87 @@ async fn add_account(
     database::add_account(&*db, name, account_type)
         .await
         .map_err(|e| e.to_string())
+}
+
+/// Get all transactions for a specific account
+///
+/// Retrieves all transactions associated with a given account ID, returning them
+/// as JSON objects with transaction details including amount, type, description, and date.
+///
+/// # Arguments
+///
+/// * `account_id` - The ID of the account to retrieve transactions for
+/// * `db` - Tauri-managed database connection pool state
+///
+/// # Returns
+///
+/// * `Ok(Vec<serde_json::Value>)` - List of transactions as JSON objects
+/// * `Err(String)` - Database error converted to string for frontend consumption
+///
+/// # Examples
+///
+/// ```javascript
+/// // Get transactions for account with ID 1
+/// const transactions = await invoke('get_transactions_by_account', { accountId: 1 });
+/// ```
+#[tauri::command]
+async fn get_transactions_by_account(
+    account_id: i64,
+    db: tauri::State<'_, SqlitePool>,
+) -> Result<Vec<serde_json::Value>, String> {
+    database::get_transactions_by_account(&*db, account_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Add a new transaction to an account
+///
+/// Creates a new transaction record for the specified account with the provided
+/// details. All amounts should be positive integers representing cents.
+///
+/// # Arguments
+///
+/// * `account_id` - The ID of the account this transaction belongs to
+/// * `amount_cents` - Transaction amount in cents (always positive, e.g., 2550 for $25.50)
+/// * `transaction_type` - Either "debit" or "credit"
+/// * `description` - Description of the transaction
+/// * `transaction_date` - Transaction date in ISO 8601 format (YYYY-MM-DD)
+/// * `db` - Tauri-managed database connection pool state
+///
+/// # Returns
+///
+/// * `Ok(())` - Transaction added successfully
+/// * `Err(String)` - Database error converted to string for frontend consumption
+///
+/// # Examples
+///
+/// ```javascript
+/// // Add a $25.50 debit transaction
+/// await invoke('add_transaction', {
+///     accountId: 1,
+///     amountCents: 2550,
+///     transactionType: 'debit',
+///     description: 'Coffee shop',
+///     transactionDate: '2025-08-13'
+/// });
+/// ```
+#[tauri::command]
+async fn add_transaction(
+    account_id: i64,
+    amount_cents: i64,
+    transaction_type: String,
+    description: String,
+    transaction_date: String,
+    db: tauri::State<'_, SqlitePool>,
+) -> Result<(), String> {
+    database::add_transaction(
+        &*db,
+        account_id,
+        amount_cents,
+        transaction_type,
+        description,
+        transaction_date,
+    )
+    .await
+    .map_err(|e| e.to_string())
 }

@@ -97,6 +97,7 @@ async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 account_id INTEGER NOT NULL,
                 amount_cents INTEGER NOT NULL,
+                transaction_type TEXT NOT NULL,
                 description TEXT NOT NULL,
                 transaction_date TEXT NOT NULL,
                 created_at TEXT DEFAULT (datetime('now')),
@@ -193,4 +194,58 @@ pub async fn get_transactions_by_account(
         .collect();
 
     Ok(result)
+}
+
+/// Adds a new transaction to the database
+///
+/// Creates a new transaction record linked to the specific account. The `created_at`
+/// timestamp is automatically set by the database using SQLite's datetime ('now').
+///
+/// # Arguments
+///
+/// * `pool` - A reference to the SQLite connection pool
+/// * `account_id` - The ID of the account this transaction belongs to
+/// * `amount_cents` - The transaction amount in cents
+/// * `transaction_type` - The type of transaction (credit or debit)
+/// * `description` - A description of the transaction (e.g., "Grocery store purchase")
+/// * `transaction_date` - The date the transaction occurred in ISO 8601 format (YYYY-MM-DD)
+///
+/// # Returns
+///
+/// Returns `Ok(())` on succesful insertion, or an `sqlx::Error` if the database operation failed
+///
+/// # Examples
+///
+/// ```no_run
+/// // Add a $25.50 debit transaction
+/// add_transaction(&pool, 1, 2550, debit, "Coffee shop".to_string(), "2025-08-13".to_string()).await?;
+/// ```
+pub async fn add_transaction(
+    pool: &SqlitePool,
+    account_id: i64,
+    amount_cents: i64,
+    transaction_type: String,
+    description: String,
+    transaction_date: String,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"
+        INSERT INTO transactions (
+        account_id,
+        amount_cents,
+        transaction_type,
+        description,
+        transaction_date) 
+        VALUES (?, ?, ?, ?, ?)
+    "#,
+    )
+    .bind(account_id)
+    .bind(amount_cents)
+    .bind(transaction_type)
+    .bind(description)
+    .bind(transaction_date)
+    .execute(pool)
+    .await?;
+
+    Ok(())
 }

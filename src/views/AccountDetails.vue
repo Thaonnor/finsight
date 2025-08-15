@@ -21,11 +21,13 @@
                     <th>Description</th>
                     <th>Type</th>
                     <th>Amount</th>
-                    <th>Balance</th>
                 </tr>
             </thead>
             <tbody>
-                <tr v-for="transaction in transactionsWithBalance" :key="transaction.id">
+                <tr
+                    v-for="transaction in transactionsWithBalance"
+                    :key="transaction.id"
+                >
                     <td>{{ formatDate(transaction.date) }}</td>
                     <td>{{ transaction.description }}</td>
                     <td>{{ transaction.transaction_type }}</td>
@@ -62,6 +64,14 @@
     import { invoke } from '@tauri-apps/api/core';
     import AddTransactionModal from '../components/AddTransactionModal.vue';
 
+    const route = useRoute();
+
+    const transactions = ref([]);
+    const loading = ref(true);
+    const showModal = ref(false);
+
+    const accountId = route.params.id;
+
     const transactionsWithBalance = computed(() => {
         if (transactions.value.length === 0) return [];
 
@@ -86,35 +96,6 @@
         return withBalances.reverse();
     });
 
-    const route = useRoute();
-    const transactions = ref([]);
-    const loading = ref(true);
-    const accountId = route.params.id;
-    const showModal = ref(false);
-
-    const fetchTransactions = async () => {
-        try {
-            loading.value = true;
-            const result = await invoke('get_transactions_by_account', {
-                accountId: parseInt(accountId),
-            });
-            transactions.value = result;
-        } catch (error) {
-            console.error('Error fetching transactions:', error);
-        } finally {
-            loading.value = false;
-        }
-    };
-
-    onMounted(() => {
-        fetchTransactions();
-    });
-
-    const handleTransactionAdded = async () => {
-        await fetchTransactions();
-        showModal.value = false;
-    };
-
     const formatDate = (dateString) => {
         return new Date(dateString).toLocaleDateString();
     };
@@ -133,4 +114,27 @@
     const getAmountClass = (transactionType) => {
         return transactionType === 'debit' ? 'negative' : 'positive';
     };
+
+    const fetchTransactions = async () => {
+        try {
+            loading.value = true;
+            const result = await invoke('get_transactions_by_account', {
+                accountId: parseInt(accountId),
+            });
+            transactions.value = result;
+        } catch (error) {
+            console.error('Error fetching transactions:', error);
+        } finally {
+            loading.value = false;
+        }
+    };
+
+    const handleTransactionAdded = async () => {
+        await fetchTransactions();
+        showModal.value = false;
+    };
+
+    onMounted(() => {
+        fetchTransactions();
+    });
 </script>

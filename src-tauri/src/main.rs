@@ -9,37 +9,32 @@
 mod database;
 use sqlx::SqlitePool;
 
-/// Main entry point for the finsight Tauri application.
+/// Main entry point for the application
 ///
-/// Initializes and runs the Tauri app with default configuration.
-/// The app will display a webview containing the Vue.js frontend.
+/// Initializes and runs Tauri app with default configuration
+/// App will display webview containing Vue.js frontend
 ///
 /// # Errors
-///
-/// This function will return an error if:
-/// * Database initialization fails (file permissions, disk space, etc.)
+/// Returns error if:
+/// * Database initialization fails (file permissions, disk space, etc)
 /// * Tauri application fails to start (missing dependencies, display issues)
 ///
 /// # Panics
-///
-/// Panics if Tauri context generation fails, which indicates a build configuration problem.
+/// Panics if Tauri context generation fails (indicates build configuration problem)
 ///
 /// # Examples
-///
-/// This function is called automatically when the application starts:
+/// Function called automatically when application starts:
 /// ```no_run
 /// // Called by the Rust runtime when app launches
 /// main().await;
 /// ```
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize the database
-    let db_pool = database::init_db()
-        .await
-        .expect("Failed to initialize database");
+    let pool = database::init_db().await?;
 
     tauri::Builder::default()
-        .manage(db_pool)
+        .manage(pool)
         .invoke_handler(tauri::generate_handler![
             get_accounts,
             add_account,
@@ -48,6 +43,8 @@ async fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");
+
+    Ok(())
 }
 
 /// Fetch all accounts from the database

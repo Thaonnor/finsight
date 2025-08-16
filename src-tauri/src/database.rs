@@ -1,41 +1,69 @@
-//! Database Operations for finsight
+//! Database layer for the finsight personal finance application.
 //!
-//! Handles SQLite database initialization and basic operations.
+//! Provides SQLite-based persistence for financial accounts and transactions using
+//! connection pooling for efficient async operations. All database interactions
+//! use prepared statements for security and performance.
+//!
+//! # Architecture
+//!
+//! - **Connection Management**: SQLite connection pool with automatic file creation
+//! - **Schema Management**: Automatic table creation with proper foreign key constraints
+//! - **Data Types**: Integer cents for precise financial calculations, ISO 8601 dates
+//! - **Error Handling**: All functions return `Result<T, sqlx::Error>` for proper error propagation
+//!
+//! # Entity Operations
+//!
+//! ## Accounts
+//! - [`get_all_accounts()`] - Retrieve all financial accounts
+//! - [`add_account()`] - Create new account records
+//!
+//! ## Transactions  
+//! - [`get_transactions_by_account()`] - Query transactions for specific accounts
+//! - [`add_transaction()`] - Create new transaction records with debit/credit types
+//!
+//! # Database Schema
+//!
+//! The database uses a simple relational model with accounts containing multiple
+//! transactions. All monetary values are stored as integer cents to avoid
+//! floating-point precision issues common in financial applications.
 
 use sqlx::{Pool, Row, Sqlite, SqlitePool, sqlite::SqliteConnectOptions};
 use std::str::FromStr;
 
-/// Initialize the SQLite database connection pool
+/// Initializes the SQLite database connection pool for the application.
 ///
-/// Creates a new SQLite database file if it doesn't exist and establishes
-/// a connection pool for async database operations. Also ensures all required
-/// tables are created with the proper schema.
+/// Creates the database file if it doesn't exist, establishes a connection pool
+/// for efficient async operations, and ensures all required tables are present
+/// with proper schema. The connection pool enables multiple concurrent database
+/// operations without blocking.
 ///
-/// The database file is created in the current working directory as `finsight.db`
+/// # Database Location
+///
+/// Creates `finsight.db` in the current working directory. For desktop applications,
+/// this is typically the application's executable directory.
 ///
 /// # Returns
-///
-/// * `Ok(Pool<Sqlite>)`    - A SQLite connection pool ready for queries
-/// * `Err(sqlxx::Error)`   - Database initialization error
+/// * `Ok(SqlitePool)` - Connection pool ready for database operations
+/// * `Err(sqlx::Error)` - Database initialization or table creation failure
 ///
 /// # Errors
-///
-/// This function will return an error if:
-/// * The database file cannot be created (permissions, disk space)
-/// * The database connection fails (file corruption, unsupported SQLite version)
-/// * Table creation queries fail (syntax errors, constraint violations)
+/// Fails if:
+/// - Database file cannot be created (insufficient permissions, disk space)
+/// - SQLite connection fails (file corruption, unsupported version)
+/// - Table schema creation fails (SQL syntax errors, constraint violations)
+/// - Connection pool setup fails (system resource limits)
 ///
 /// # Examples
-///
 /// ```no_run
-/// use finsight::database;
+/// use crate::database;
 ///
-/// #[tokio::main]
-/// async fn main() {
-///     let pool = database::init_db().await
-///         .expect("Failed to initialize database.");
-///
-///     // Use pool for database operations...
+/// #[tokio::main] 
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     let db_pool = database::init_db().await?;
+///     
+///     // Pool is now ready for all database operations
+///     let accounts = database::get_all_accounts(&db_pool).await?;
+///     Ok(())
 /// }
 /// ```
 pub async fn init_db() -> Result<Pool<Sqlite>, sqlx::Error> {
@@ -49,34 +77,38 @@ pub async fn init_db() -> Result<Pool<Sqlite>, sqlx::Error> {
     Ok(pool)
 }
 
-/// Creates database tables if they don't exist
+/// Creates all required database tables with proper schema if they don't exist.
 ///
-/// Ensures all required tables are present in the database by creating them
-/// with proper schemas if they don't already exist. Currently creates the
-/// accounts table for storing user financial accounts.
+/// Executes CREATE TABLE IF NOT EXISTS statements for the complete database schema.
+/// Currently creates accounts and transactions tables with proper foreign key
+/// relationships and constraints for financial data integrity.
+///
+/// # Schema Created
+/// - **accounts**: Financial account records with name, type, and timestamps
+/// - **transactions**: Transaction records linked to accounts with amount, type, and dates
 ///
 /// # Arguments
-///
-/// * `pool` - A reference to the SQLite connection pool
+/// * `pool` - SQLite connection pool reference for executing table creation queries
 ///
 /// # Returns
-///
-/// * `Ok(())` - All tables created successfully (unit type means "success, no data")
-/// * `Err(sqlx::Error)` - Table creation failed
+/// * `Ok(())` - All tables created or verified to exist
+/// * `Err(sqlx::Error)` - Table creation or schema validation failure
 ///
 /// # Errors
-///
-/// This function will return an error if:
-/// * SQL syntax in table creation queries is invalid
-/// * Database file is read-only or corrupted
-/// * Insufficient disk space for table creation
-/// * Database connection is lost during table creation
+/// Fails if:
+/// - SQL schema syntax is invalid (programming error)
+/// - Database file is read-only or locked by another process
+/// - Insufficient disk space for table metadata
+/// - Database corruption prevents schema operations
+/// - Connection pool is exhausted or disconnected
 ///
 /// # Examples
-///
 /// ```no_run
-/// let pool = SqlitePool::connect("sqlite::test.db").await?;
+/// use sqlx::SqlitePool;
+/// 
+/// let pool = SqlitePool::connect("sqlite:test.db").await?;
 /// create_tables(&pool).await?;
+/// // Database now has accounts and transactions tables ready
 /// ```
 async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     sqlx::query(
@@ -111,14 +143,38 @@ async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-/// Fetch all accounts from the database
+/// Retrieves all financial accounts from the database.
+///
+/// Queries the accounts table and returns all records as JSON-serializable objects
+/// for frontend consumption. Results include account ID, name, and type but exclude
+/// internal timestamps to keep the API clean.
 ///
 /// # Arguments
-/// * `pool` - Database connection pool reference
+/// * `pool` - SQLite connection pool reference for executing the query
 ///
 /// # Returns
-/// * `Ok(Vec<serde_json::Value>)` - List of accounts as JSON objects
-/// * `Err(sqlx::Error)` - Database query error
+/// * `Ok(Vec<serde_json::Value>)` - Array of account objects with id, name, and account_type
+/// * `Err(sqlx::Error)` - Database query or serialization failure
+///
+/// # Errors
+/// Fails if:
+/// - Database connection cannot be established (pool exhaustion, file locks)
+/// - Query execution fails (corrupted database, schema changes)
+/// - Row data cannot be extracted (type mismatches, missing columns)
+/// - JSON serialization fails (malformed database content)
+///
+/// # Examples
+/// ```no_run
+/// let accounts = get_all_accounts(&pool).await?;
+/// println!("Found {} accounts", accounts.len());
+/// 
+/// for account in accounts {
+///     println!("Account: {} ({})", 
+///         account["name"].as_str().unwrap(),
+///         account["account_type"].as_str().unwrap()
+///     );
+/// }
+/// ```
 pub async fn get_all_accounts(pool: &SqlitePool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     let accounts = sqlx::query("SELECT id, name, account_type, created_at FROM accounts")
         .fetch_all(pool)
@@ -138,19 +194,37 @@ pub async fn get_all_accounts(pool: &SqlitePool) -> Result<Vec<serde_json::Value
     Ok(result)
 }
 
-/// Adds a new account to the database.
+/// Creates a new financial account in the database.
 ///
-/// Creates a new account record with the provided name and type. The `created_at` timestamp is automatically set by the database using CURRENT_TIMESTAMP.
+/// Inserts a new account record with the provided name and type. The creation
+/// timestamp is automatically set by the database. Account names should be
+/// descriptive and meaningful for household financial tracking.
 ///
 /// # Arguments
-///
-/// * `pool` - A reference to the SQLite connection pool
-/// * `name` - The display name for the account (e.g., "Chase Checking")
-/// * `account_type` - The type of account ("checking" or "savings")
+/// * `pool` - SQLite connection pool reference for executing the insertion
+/// * `name` - Human-readable account name (e.g., "Chase Checking", "Emergency Savings")
+/// * `account_type` - Account classification, typically "checking" or "savings"
 ///
 /// # Returns
+/// * `Ok(())` - Account created successfully with auto-generated ID
+/// * `Err(sqlx::Error)` - Database insertion or validation failure
 ///
-/// Returns `Ok(())` on successful insertion, or an `sqlx::Error` if the database operation fails.
+/// # Errors
+/// Fails if:
+/// - Database connection cannot be established (pool exhaustion, file locks)
+/// - Account name violates constraints (empty string, duplicate names if enforced)
+/// - Account type is invalid or unsupported by application logic
+/// - Database insertion fails (disk space, permissions, corruption)
+/// - Parameter binding fails (invalid UTF-8 in strings)
+///
+/// # Examples
+/// ```no_run
+/// // Create a primary checking account
+/// add_account(&pool, "Wells Fargo Checking".to_string(), "checking".to_string()).await?;
+/// 
+/// // Create a savings account
+/// add_account(&pool, "High-Yield Savings".to_string(), "savings".to_string()).await?;
+/// ```
 pub async fn add_account(
     pool: &SqlitePool,
     name: String,
@@ -165,16 +239,43 @@ pub async fn add_account(
     Ok(())
 }
 
-/// Fetch all transactions for a specific account
+/// Retrieves all transactions for a specific financial account.
+///
+/// Queries transactions linked to the given account ID and returns them as
+/// JSON-serializable objects for frontend display. Results include core transaction
+/// data but exclude internal metadata like creation timestamps to keep the API clean.
 ///
 /// # Arguments
-/// * `pool` - Database connection pool reference
-/// * `account_id` - The ID of the account to get transactions for
+/// * `pool` - SQLite connection pool reference for executing the query
+/// * `account_id` - Database ID of the account to retrieve transactions for
 ///
 /// # Returns
-/// * `Ok(Vec<serde_json::Value>)` - List of transactions as JSON objects
-/// * `Err(sqlx::Error)` - Database query error
-pub async fn get_transactions_by_account(
+/// * `Ok(Vec<serde_json::Value>)` - Array of transaction objects with id, account_id, amount_cents, description, and transaction_date
+/// * `Err(sqlx::Error)` - Database query or data extraction failure
+///
+/// # Errors
+/// Fails if:
+/// - Database connection cannot be established (pool exhaustion, file locks)
+/// - Account ID does not exist (no matching foreign key reference)
+/// - Query execution fails (corrupted database, schema changes)
+/// - Row data extraction fails (type mismatches, missing columns)
+/// - JSON serialization fails (malformed database content)
+///
+/// # Examples
+/// ```no_run
+/// // Load transactions for account detail view
+/// let transactions = get_transactions_by_account(&pool, 1).await?;
+/// 
+/// for tx in transactions {
+///     let amount_dollars = tx["amount_cents"].as_i64().unwrap() as f64 / 100.0;
+///     println!("{}: {} - ${:.2}", 
+///         tx["transaction_date"].as_str().unwrap(),
+///         tx["description"].as_str().unwrap(),
+///         amount_dollars
+///     );
+/// }
+/// ```
+pub async fn get_transactions(
     pool: &SqlitePool,
     account_id: i64,
 ) -> Result<Vec<serde_json::Value>, sqlx::Error> {
@@ -196,29 +297,54 @@ pub async fn get_transactions_by_account(
     Ok(result)
 }
 
-/// Adds a new transaction to the database
+/// Creates a new financial transaction record for the specified account.
 ///
-/// Creates a new transaction record linked to the specific account. The `created_at`
-/// timestamp is automatically set by the database using SQLite's datetime ('now').
+/// Inserts a transaction with the provided details, using integer cents for precise
+/// financial calculations. The creation timestamp is automatically set by the database.
+/// Transaction types determine how amounts affect account balances in future calculations.
 ///
 /// # Arguments
-///
-/// * `pool` - A reference to the SQLite connection pool
-/// * `account_id` - The ID of the account this transaction belongs to
-/// * `amount_cents` - The transaction amount in cents
-/// * `transaction_type` - The type of transaction (credit or debit)
-/// * `description` - A description of the transaction (e.g., "Grocery store purchase")
-/// * `transaction_date` - The date the transaction occurred in ISO 8601 format (YYYY-MM-DD)
+/// * `pool` - SQLite connection pool reference for executing the insertion
+/// * `account_id` - Database ID of the account this transaction belongs to
+/// * `amount_cents` - Transaction amount in cents (always positive, e.g., 2550 for $25.50)
+/// * `transaction_type` - Either "debit" (reduces balance) or "credit" (increases balance)
+/// * `description` - Human-readable transaction description from bank data or user input
+/// * `transaction_date` - Transaction date in ISO 8601 format (YYYY-MM-DD)
 ///
 /// # Returns
+/// * `Ok(())` - Transaction created successfully with auto-generated ID
+/// * `Err(sqlx::Error)` - Database insertion or validation failure
 ///
-/// Returns `Ok(())` on succesful insertion, or an `sqlx::Error` if the database operation failed
+/// # Errors
+/// Fails if:
+/// - Database connection cannot be established (pool exhaustion, file locks)
+/// - Account ID does not exist (invalid foreign key reference)
+/// - Transaction type is invalid (must be "debit" or "credit")
+/// - Date format is malformed (must be valid ISO 8601 YYYY-MM-DD)
+/// - Database insertion fails (disk space, permissions, corruption)
+/// - Parameter binding fails (invalid UTF-8 in strings, integer overflow)
 ///
 /// # Examples
-///
 /// ```no_run
-/// // Add a $25.50 debit transaction
-/// add_transaction(&pool, 1, 2550, debit, "Coffee shop".to_string(), "2025-08-13".to_string()).await?;
+/// // Record a grocery store purchase
+/// add_transaction(
+///     &pool,
+///     1,
+///     4275,  // $42.75
+///     "debit".to_string(),
+///     "Whole Foods Market".to_string(),
+///     "2025-08-15".to_string()
+/// ).await?;
+/// 
+/// // Record a salary deposit
+/// add_transaction(
+///     &pool,
+///     1,
+///     250000,  // $2,500.00
+///     "credit".to_string(),
+///     "Payroll Deposit".to_string(),
+///     "2025-08-15".to_string()
+/// ).await?;
 /// ```
 pub async fn add_transaction(
     pool: &SqlitePool,

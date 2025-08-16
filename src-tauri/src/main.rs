@@ -198,7 +198,7 @@ async fn get_transactions(
     account_id: i64,
     db: tauri::State<'_, SqlitePool>,
 ) -> Result<Vec<serde_json::Value>, String> {
-    database::get_transactions_by_account(&*db, account_id)
+    database::get_transactions(&*db, account_id)
         .await
         .map_err(|e| e.to_string())
 }

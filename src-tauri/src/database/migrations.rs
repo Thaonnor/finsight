@@ -215,7 +215,6 @@ async fn record_migration(pool: &SqlitePool, migration_name: &str) -> Result<(),
 /// SELECT * FROM accounts WHERE archived = FALSE;
 /// ```
 async fn migration_001_add_archived_column(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    // TODO: Add archived column
     sqlx::query("ALTER TABLE accounts ADD COLUMN archived BOOLEAN NOT NULL DEFAULT FALSE")
         .execute(pool)
         .await?;

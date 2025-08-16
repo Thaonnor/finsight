@@ -16,7 +16,6 @@
 //! - **Database**: SQLite with manual transaction and account management
 
 mod database;
-mod migrations;
 use sqlx::SqlitePool;
 
 /// Application entry point for the finsight personal finance desktop application.

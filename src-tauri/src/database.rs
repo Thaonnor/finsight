@@ -74,6 +74,9 @@ pub async fn init_db() -> Result<Pool<Sqlite>, sqlx::Error> {
     // Create tables if they don't exist
     create_tables(&pool).await?;
 
+    // Run any pending migrations
+    crate::migrations::run_migrations(&pool).await?;
+
     Ok(pool)
 }
 
@@ -111,6 +114,16 @@ pub async fn init_db() -> Result<Pool<Sqlite>, sqlx::Error> {
 /// // Database now has accounts and transactions tables ready
 /// ```
 async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"CREATE TABLE IF NOT EXISTS migrations(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            migration_name TEXT NOT NULL UNIQUE,
+            applied_at TEXT DEFAULT (datetime('now'))
+        )"#,
+    )
+    .execute(pool)
+    .await?;
+
     sqlx::query(
         r#"
             CREATE TABLE IF NOT EXISTS accounts (

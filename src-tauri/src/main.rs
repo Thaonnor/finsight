@@ -16,6 +16,7 @@
 //! - **Database**: SQLite with manual transaction and account management
 
 mod database;
+mod migrations;
 use sqlx::SqlitePool;
 
 /// Application entry point for the finsight personal finance desktop application.
@@ -24,12 +25,12 @@ use sqlx::SqlitePool;
 /// with command handlers, and starts the desktop application event loop.
 ///
 /// # Database Initialization
-/// 
+///
 /// Creates a SQLite connection pool using the configured database URL. The database
 /// schema is automatically created if it doesn't exist.
 ///
 /// # Command Registration
-/// 
+///
 /// Registers the following Tauri command handlers for frontend-backend communication:
 /// - `get_accounts` - Retrieves all financial accounts
 /// - `add_account` - Creates a new financial account  
@@ -142,7 +143,7 @@ async fn get_accounts(db: tauri::State<'_, SqlitePool>) -> Result<Vec<serde_json
 ///     name: 'Wells Fargo Checking',
 ///     accountType: 'checking'
 /// });
-/// 
+///
 /// // Handle validation errors
 /// try {
 ///     await invoke('add_account', { name: '', accountType: 'invalid' });
@@ -185,10 +186,10 @@ async fn add_account(
 /// # Examples
 /// ```javascript
 /// // Load transactions for account detail view
-/// const transactions = await invoke('get_transactions_by_account', { 
-///     accountId: 1 
+/// const transactions = await invoke('get_transactions_by_account', {
+///     accountId: 1
 /// });
-/// 
+///
 /// transactions.forEach(tx => {
 ///     console.log(`${tx.date}: ${tx.description} - $${tx.amount_cents / 100}`);
 /// });
@@ -239,7 +240,7 @@ async fn get_transactions(
 ///     description: 'Whole Foods Market',
 ///     transactionDate: '2025-08-15'
 /// });
-/// 
+///
 /// // Add a paycheck deposit
 /// await invoke('add_transaction', {
 ///     accountId: 1,

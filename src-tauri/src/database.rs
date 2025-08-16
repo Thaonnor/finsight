@@ -18,7 +18,7 @@
 //! - [`add_account()`] - Create new account records
 //!
 //! ## Transactions  
-//! - [`get_transactions_by_account()`] - Query transactions for specific accounts
+//! - [`get_transactions()`] - Query transactions for specific accounts
 //! - [`add_transaction()`] - Create new transaction records with debit/credit types
 //!
 //! # Database Schema
@@ -57,7 +57,7 @@ use std::str::FromStr;
 /// ```no_run
 /// use crate::database;
 ///
-/// #[tokio::main] 
+/// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ///     let db_pool = database::init_db().await?;
 ///     
@@ -105,7 +105,7 @@ pub async fn init_db() -> Result<Pool<Sqlite>, sqlx::Error> {
 /// # Examples
 /// ```no_run
 /// use sqlx::SqlitePool;
-/// 
+///
 /// let pool = SqlitePool::connect("sqlite:test.db").await?;
 /// create_tables(&pool).await?;
 /// // Database now has accounts and transactions tables ready
@@ -167,9 +167,9 @@ async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 /// ```no_run
 /// let accounts = get_all_accounts(&pool).await?;
 /// println!("Found {} accounts", accounts.len());
-/// 
+///
 /// for account in accounts {
-///     println!("Account: {} ({})", 
+///     println!("Account: {} ({})",
 ///         account["name"].as_str().unwrap(),
 ///         account["account_type"].as_str().unwrap()
 ///     );
@@ -221,7 +221,7 @@ pub async fn get_all_accounts(pool: &SqlitePool) -> Result<Vec<serde_json::Value
 /// ```no_run
 /// // Create a primary checking account
 /// add_account(&pool, "Wells Fargo Checking".to_string(), "checking".to_string()).await?;
-/// 
+///
 /// // Create a savings account
 /// add_account(&pool, "High-Yield Savings".to_string(), "savings".to_string()).await?;
 /// ```
@@ -265,10 +265,10 @@ pub async fn add_account(
 /// ```no_run
 /// // Load transactions for account detail view
 /// let transactions = get_transactions_by_account(&pool, 1).await?;
-/// 
+///
 /// for tx in transactions {
 ///     let amount_dollars = tx["amount_cents"].as_i64().unwrap() as f64 / 100.0;
-///     println!("{}: {} - ${:.2}", 
+///     println!("{}: {} - ${:.2}",
 ///         tx["transaction_date"].as_str().unwrap(),
 ///         tx["description"].as_str().unwrap(),
 ///         amount_dollars
@@ -335,7 +335,7 @@ pub async fn get_transactions(
 ///     "Whole Foods Market".to_string(),
 ///     "2025-08-15".to_string()
 /// ).await?;
-/// 
+///
 /// // Record a salary deposit
 /// add_transaction(
 ///     &pool,
@@ -372,6 +372,44 @@ pub async fn add_transaction(
     .bind(transaction_date)
     .execute(pool)
     .await?;
+
+    Ok(())
+}
+
+/// Removes a transaction record from the database.
+///
+/// Permanently deletes the transaction with the specified ID. This operation
+/// cannot be undone, so the transaction data will be completely removed from
+/// the database. Use with caution as this affects historical financial records.
+///
+/// # Arguments
+/// * `pool` - SQLite connection pool reference for executing the deletion
+/// * `transaction_id` - Database ID of the transaction to remove
+///
+/// # Returns
+/// * `Ok(())` - Transaction deleted successfully
+/// * `Err(sqlx::Error)` - Database deletion failure or transaction not found
+///
+/// # Errors
+/// Fails if:
+/// - Database connection cannot be established (pool exhaustion, file locks)
+/// - Transaction ID does not exist (no matching record to delete)
+/// - Database deletion fails (permissions, corruption, foreign key constraints)
+/// - Connection pool is exhausted or disconnected
+///
+/// # Examples
+/// ```no_run
+/// // Remove an incorrect transaction entry
+/// delete_transaction(&pool, 123).await?;
+///
+/// // Note: No error if transaction ID doesn't exist - SQLite DELETE succeeds
+/// // with 0 rows affected when no matching records are found
+/// ```
+pub async fn delete_transaction(pool: &SqlitePool, transaction_id: i64) -> Result<(), sqlx::Error> {
+    sqlx::query("DELETE FROM transactions WHERE id = ?")
+        .bind(transaction_id)
+        .execute(pool)
+        .await?;
 
     Ok(())
 }

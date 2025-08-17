@@ -34,7 +34,7 @@ mod accounts;
 mod migrations;
 mod transactions;
 
-pub use { accounts::*, transactions::* };
+pub use {accounts::*, transactions::*};
 
 /// Initializes the SQLite database connection pool for the application.
 ///
@@ -156,18 +156,17 @@ async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
-    // TODO: Create migration to add category_id foreign key
     sqlx::query(
         r#"
             CREATE TABLE IF NOT EXISTS transactions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                account_id INTEGER NOT NULL,
+                account_id INTEGER NOT NULL REFERENCES accounds(id),
                 amount_cents INTEGER NOT NULL,
                 transaction_type TEXT NOT NULL,
                 description TEXT NOT NULL,
                 transaction_date TEXT NOT NULL,
-                created_at TEXT DEFAULT (datetime('now')),
-                FOREIGN KEY (account_id) REFERENCES accounts(id)
+                category_id INTEGER NOT NULL REFERENCES categories(id),
+                created_at TEXT DEFAULT (datetime('now'))
         )
         "#,
     )

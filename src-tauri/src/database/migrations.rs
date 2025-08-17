@@ -1,3 +1,9 @@
+//! # Development Note
+//! 
+//! Migration system is currently hibernated during active development.
+//! Schema changes are handled via create_tables() and database deletion.
+//! Will resume migrations when moving to production with real user data.
+//! 
 //! Database migration system for the finsight personal finance application.
 //!
 //! Provides automatic schema evolution through versioned migrations that run
@@ -6,7 +12,8 @@
 //!
 //! # Migration System Design
 //!
-//! - **Registry Pattern**: All migrations are registered in `run_migrations()`
+//! - **Name Registry Pattern**: All migrations are registered by name in `run_migrations()`
+//! - **Match-based Execution**: Migration functions called via match statement to avoid type issues
 //! - **Automatic Execution**: Migrations run during database initialization
 //! - **Tracking**: Applied migrations are recorded in the `migrations` table
 //! - **One-Time Execution**: Each migration runs only once per database
@@ -15,8 +22,9 @@
 //! # Adding New Migrations
 //!
 //! 1. Create a new migration function: `migration_XXX_description`
-//! 2. Add it to the registry in `run_migrations()`
-//! 3. Migrations will automatically run on next app startup
+//! 2. Add the name to the `migration_registry` vector in `run_migrations()`
+//! 3. Add a match arm for the new migration name
+//! 4. Migrations will automatically run on next app startup
 //!
 //! # Example Migration
 //!
@@ -46,9 +54,9 @@ use sqlx::{Row, SqlitePool};
 ///
 /// # Migration Registry
 ///
-/// All available migrations are defined in the `migration_registry` vector with
-/// their names and corresponding functions. New migrations should be added to
-/// this registry to be automatically discovered and executed.
+/// All available migrations are defined by name in the `migration_registry` vector.
+/// Each migration is executed via match statement to avoid Rust function pointer
+/// type complications. New migrations should be added to both the registry and match arms.
 ///
 /// # Arguments
 /// * `pool` - SQLite connection pool for executing migrations and tracking
@@ -74,18 +82,28 @@ use sqlx::{Row, SqlitePool};
 /// # Adding Migrations
 /// ```rust
 /// let migration_registry = vec![
-///     ("001_add_archived_column", migration_001_add_archived_column),
-///     ("002_new_migration", migration_002_new_migration), // <- Add here
+///     "001_add_archived_column",
+///     "002_new_migration", // <- Add here
 /// ];
+///
+/// // And add to match statement:
+/// match name {
+///     "001_add_archived_column" => migration_001_add_archived_column(pool).await?,
+///     "002_new_migration" => migration_002_new_migration(pool).await?, // <- And here
+///     _ => panic!("Unknown migration: {}", name),
+/// }
 /// ```
 pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     let applied = get_applied_migrations(pool).await?;
 
-    let migration_registry = vec![("001_add_archived_column", migration_001_add_archived_column)];
+    let migration_registry = vec!["001_add_archived_column"];
 
-    for (name, migration_fn) in migration_registry {
+    for name in migration_registry {
         if !applied.contains(&name.to_string()) {
-            migration_fn(pool).await?;
+            match name {
+                "001_add_archived_column" => migration_001_add_archived_column(pool).await?,
+                _ => panic!("Unknown migration: {}", name),
+            }
             record_migration(pool, name).await?;
         }
     }
@@ -210,7 +228,7 @@ async fn record_migration(pool: &SqlitePool, migration_name: &str) -> Result<(),
 /// ```sql
 /// -- Hide account instead of deleting
 /// UPDATE accounts SET archived = TRUE WHERE id = 123;
-/// 
+///
 /// -- Query only active accounts
 /// SELECT * FROM accounts WHERE archived = FALSE;
 /// ```

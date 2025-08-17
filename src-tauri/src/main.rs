@@ -32,9 +32,11 @@ use sqlx::SqlitePool;
 ///
 /// Registers the following Tauri command handlers for frontend-backend communication:
 /// - `get_accounts` - Retrieves all financial accounts
-/// - `add_account` - Creates a new financial account  
+/// - `add_account` - Creates a new financial account
+/// - `update_account` - Updates existing account details and archived status
 /// - `get_transactions` - Fetches transactions for a specific account
 /// - `add_transaction` - Creates a new transaction record
+/// - `delete_transaction` - Permanently removes a transaction record
 ///
 /// # Runtime Behavior
 ///
@@ -72,8 +74,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .invoke_handler(tauri::generate_handler![
             get_accounts,
             add_account,
+            update_account,
             get_transactions,
-            add_transaction
+            add_transaction,
+            delete_transaction
         ])
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");
@@ -157,6 +161,62 @@ async fn add_account(
     account_type: String,
 ) -> Result<(), String> {
     database::add_account(&*db, name, account_type)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Updates an existing financial account with new values.
+///
+/// Modifies all fields of the specified account including name, type, and archived
+/// status. This allows for complete account management including soft deletion
+/// through the archived flag. All parameters are required to ensure data consistency.
+///
+/// # Arguments
+/// * `db` - SQLite connection pool managed by Tauri state
+/// * `account_id` - Database ID of the account to modify
+/// * `name` - New human-readable account name
+/// * `account_type` - New account classification ("checking" or "savings")
+/// * `archived` - New archived status (true hides account, false shows it)
+///
+/// # Returns
+/// * `Ok(())` - Account updated successfully
+/// * `Err(String)` - Validation or database error message for frontend display
+///
+/// # Errors
+/// Fails if:
+/// - Database connection cannot be established (pool exhaustion, file locks)
+/// - Account ID does not exist (no matching record to update)
+/// - Account name violates constraints (empty string, potential duplicates)
+/// - Invalid account type provided (must be "checking" or "savings")
+/// - Database update fails (permissions, corruption, constraint violations)
+///
+/// # Examples
+/// ```javascript
+/// // Rename an account
+/// await invoke('update_account', {
+///     accountId: 1,
+///     name: 'Chase Premium Checking',
+///     accountType: 'checking',
+///     archived: false
+/// });
+///
+/// // Archive an old account
+/// await invoke('update_account', {
+///     accountId: 5,
+///     name: 'Old Savings Account',
+///     accountType: 'savings',
+///     archived: true
+/// });
+/// ```
+#[tauri::command]
+async fn update_account(
+    db: tauri::State<'_, SqlitePool>,
+    account_id: i64,
+    name: String,
+    account_type: String,
+    archived: bool,
+) -> Result<(), String> {
+    database::update_account(&*db, account_id, name, account_type, archived)
         .await
         .map_err(|e| e.to_string())
 }
@@ -268,4 +328,49 @@ async fn add_transaction(
     )
     .await
     .map_err(|e| e.to_string())
+}
+
+/// Permanently removes a transaction record from the database.
+///
+/// Deletes the transaction with the specified ID from the database. This operation
+/// cannot be undone and will completely remove the transaction from financial records.
+/// Use with caution as this affects historical data and account balance calculations.
+///
+/// # Arguments
+/// * `db` - SQLite connection pool managed by Tauri state
+/// * `transaction_id` - Database ID of the transaction to remove
+///
+/// # Returns
+/// * `Ok(())` - Transaction deleted successfully
+/// * `Err(String)` - Database error message for frontend display
+///
+/// # Errors
+/// Fails if:
+/// - Database connection cannot be established (pool exhaustion, file locks)
+/// - Transaction ID does not exist (no matching record to delete)
+/// - Database deletion fails (permissions, corruption, foreign key constraints)
+/// - Connection pool is exhausted or disconnected
+///
+/// # Examples
+/// ```javascript
+/// // Remove an incorrect transaction entry
+/// await invoke('delete_transaction', {
+///     transactionId: 123
+/// });
+///
+/// // Handle deletion errors
+/// try {
+///     await invoke('delete_transaction', { transactionId: 999 });
+/// } catch (error) {
+///     console.error('Failed to delete transaction:', error);
+/// }
+/// ```
+#[tauri::command]
+async fn delete_transaction(
+    db: tauri::State<'_, SqlitePool>,
+    transaction_id: i64,
+) -> Result<(), String> {
+    database::delete_transaction(&*db, transaction_id)
+        .await
+        .map_err(|e| e.to_string())
 }

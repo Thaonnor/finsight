@@ -25,7 +25,7 @@ use sqlx::{Row, SqlitePool};
 /// # Examples
 /// ```no_run
 /// // Load transactions for account detail view
-/// let transactions = get_transactions_by_account(&pool, 1).await?;
+/// let transactions = get_transactions(&pool, 1).await?;
 ///
 /// for tx in transactions {
 ///     let amount_dollars = tx["amount_cents"].as_i64().unwrap() as f64 / 100.0;
@@ -171,6 +171,91 @@ pub async fn delete_transaction(pool: &SqlitePool, transaction_id: i64) -> Resul
         .bind(transaction_id)
         .execute(pool)
         .await?;
+
+    Ok(())
+}
+
+/// Updates an existing transaction record with new values.
+///
+/// Modifies all fields of the specified transaction with the provided data.
+/// This replaces the entire transaction record, ensuring consistency across
+/// all transaction attributes. The transaction ID cannot be changed through
+/// this operation as it serves as the immutable record identifier.
+///
+/// # Arguments
+/// * `pool` - SQLite connection pool reference for executing the update
+/// * `transaction_id` - Database ID of the transaction to modify
+/// * `account_id` - New account ID this transaction belongs to
+/// * `amount_cents` - New transaction amount in cents (always positive, e.g., 2550 for $25.50)
+/// * `transaction_type` - New transaction type ("debit" or "credit")
+/// * `description` - New human-readable transaction description
+/// * `transaction_date` - New transaction date in ISO 8601 format (YYYY-MM-DD)
+///
+/// # Returns
+/// * `Ok(())` - Transaction updated successfully
+/// * `Err(sqlx::Error)` - Database update failure or transaction not found
+///
+/// # Errors
+/// Fails if:
+/// - Database connection cannot be established (pool exhaustion, file locks)
+/// - Transaction ID does not exist (no matching record to update)
+/// - New account ID does not exist (invalid foreign key reference)
+/// - Transaction type is invalid (must be "debit" or "credit")
+/// - Date format is malformed (must be valid ISO 8601 YYYY-MM-DD)
+/// - Database update fails (permissions, corruption, constraint violations)
+/// - Parameter binding fails (invalid UTF-8 in strings, integer overflow)
+///
+/// # Examples
+/// ```no_run
+/// // Correct a grocery store transaction amount
+/// update_transaction(
+///     &pool,
+///     123,
+///     1,
+///     5275,  // Updated to $52.75
+///     "debit".to_string(),
+///     "Whole Foods Market - Corrected".to_string(),
+///     "2025-08-15".to_string()
+/// ).await?;
+///
+/// // Move transaction to different account
+/// update_transaction(
+///     &pool,
+///     456,
+///     2,      // New account_id
+///     250000,
+///     "credit".to_string(),
+///     "Payroll Deposit".to_string(),
+///     "2025-08-15".to_string()
+/// ).await?;
+/// ```
+pub async fn update_transaction(
+    pool: &SqlitePool,
+    transaction_id: i64,
+    account_id: i64,
+    amount_cents: i64,
+    transaction_type: String,
+    description: String,
+    transaction_date: String,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"
+        UPDATE transactions SET 
+            account_id = ?,
+            amount_cents = ?,
+            transaction_type = ?,
+            description = ?,
+            transaction_date = ?
+            WHERE id = ?"#,
+    )
+    .bind(account_id)
+    .bind(amount_cents)
+    .bind(transaction_type)
+    .bind(description)
+    .bind(transaction_date)
+    .bind(transaction_id)
+    .execute(pool)
+    .await?;
 
     Ok(())
 }

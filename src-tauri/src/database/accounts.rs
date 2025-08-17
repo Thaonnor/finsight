@@ -95,3 +95,68 @@ pub async fn add_account(
 
     Ok(())
 }
+
+/// Updates an existing financial account with new values.
+///
+/// Modifies all fields of the specified account with the provided data,
+/// including the archived status for soft deletion functionality. This
+/// replaces the entire account record to ensure consistency across all
+/// account attributes. The account ID remains immutable as the record identifier.
+///
+/// # Arguments
+/// * `pool` - SQLite connection pool reference for executing the update
+/// * `account_id` - Database ID of the account to modify
+/// * `name` - New human-readable account name
+/// * `account_type` - New account classification ("checking" or "savings")
+/// * `archived` - New archived status (true hides account, false shows it)
+///
+/// # Returns
+/// * `Ok(())` - Account updated successfully
+/// * `Err(sqlx::Error)` - Database update failure or account not found
+///
+/// # Errors
+/// Fails if:
+/// - Database connection cannot be established (pool exhaustion, file locks)
+/// - Account ID does not exist (no matching record to update)
+/// - Account name violates constraints (empty string, potential duplicates)
+/// - Account type is invalid or unsupported by application logic
+/// - Database update fails (permissions, corruption, constraint violations)
+/// - Parameter binding fails (invalid UTF-8 in strings)
+///
+/// # Examples
+/// ```no_run
+/// // Rename an account
+/// update_account(
+///     &pool,
+///     1,
+///     "Chase Premium Checking".to_string(),
+///     "checking".to_string(),
+///     false
+/// ).await?;
+///
+/// // Archive an old account
+/// update_account(
+///     &pool,
+///     5,
+///     "Old Savings Account".to_string(),
+///     "savings".to_string(),
+///     true
+/// ).await?;
+/// ```
+pub async fn update_account(
+    pool: &SqlitePool,
+    account_id: i64,
+    name: String,
+    account_type: String,
+    archived: bool,
+) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE accounts SET name = ?, account_type = ?, archived = ? WHERE id = ?")
+        .bind(name)
+        .bind(account_type)
+        .bind(archived)
+        .bind(account_id)
+        .execute(pool)
+        .await?;
+
+    Ok(())
+}

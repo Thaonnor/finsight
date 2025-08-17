@@ -144,6 +144,21 @@ async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 
     sqlx::query(
         r#"
+            CREATE TABLE IF NOT EXISTS categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                parent_id INTEGER,
+                created_at TEXT DEFAULT (datetime('now')),
+                FOREIGN KEY (parent_id) REFERENCES categories(id)
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    // TODO: Create migration to add category_id foreign key
+    sqlx::query(
+        r#"
             CREATE TABLE IF NOT EXISTS transactions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 account_id INTEGER NOT NULL,

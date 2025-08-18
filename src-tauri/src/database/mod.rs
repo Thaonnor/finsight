@@ -31,10 +31,11 @@ use sqlx::{Pool, Sqlite, SqlitePool, sqlite::SqliteConnectOptions};
 use std::str::FromStr;
 
 mod accounts;
+mod categories;
 mod migrations;
 mod transactions;
 
-pub use {accounts::*, transactions::*};
+pub use {accounts::*, categories::*, transactions::*};
 
 /// Initializes the SQLite database connection pool for the application.
 ///
@@ -77,11 +78,11 @@ pub async fn init_db() -> Result<Pool<Sqlite>, sqlx::Error> {
 
     let pool = SqlitePool::connect_with(options).await?;
 
-    // Create tables if they don't exist
     create_tables(&pool).await?;
 
-    // Run any pending migrations
     migrations::run_migrations(&pool).await?;
+
+    seed_system_data(&pool).await?;
 
     Ok(pool)
 }
@@ -146,7 +147,7 @@ async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         r#"
             CREATE TABLE IF NOT EXISTS categories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
+                name TEXT NOT NULL UNIQUE,
                 parent_id INTEGER,
                 created_at TEXT DEFAULT (datetime('now')),
                 FOREIGN KEY (parent_id) REFERENCES categories(id)
@@ -160,7 +161,7 @@ async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         r#"
             CREATE TABLE IF NOT EXISTS transactions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                account_id INTEGER NOT NULL REFERENCES accounds(id),
+                account_id INTEGER NOT NULL REFERENCES accounts(id),
                 amount_cents INTEGER NOT NULL,
                 transaction_type TEXT NOT NULL,
                 description TEXT NOT NULL,
@@ -172,6 +173,27 @@ async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     )
     .execute(pool)
     .await?;
+
+    Ok(())
+}
+
+/// Seeds essential system data required for application functionality.
+///
+/// Creates mandatory system categories like "Uncategorized" that must exist
+/// for proper transaction categorization. Uses INSERT OR IGNORE to safely
+/// handle multiple calls without creating duplicates. Called automatically
+/// during database initialization.
+///
+/// # Arguments
+/// * `pool` - SQLite connection pool reference for executing insertions
+///
+/// # Returns
+/// * `Ok(())` - System data seeded successfully or already exists
+/// * `Err(sqlx::Error)` - Database insertion failure
+async fn seed_system_data(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    sqlx::query("INSERT OR IGNORE INTO categories (name, parent_id) VALUES ('Uncategorized', NULL)")
+        .execute(pool)
+        .await?;
 
     Ok(())
 }

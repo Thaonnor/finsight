@@ -183,7 +183,7 @@ async fn handle_orphaned_categories(
 /// // Move all transactions from deleted "Groceries" category to "Uncategorized"
 /// handle_orphaned_transactions(&pool, 5).await?;
 /// ```
-pub async fn handle_orphaned_transactions(
+async fn handle_orphaned_transactions(
     pool: &SqlitePool,
     category_id: i64,
 ) -> Result<(), sqlx::Error> {

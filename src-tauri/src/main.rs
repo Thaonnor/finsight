@@ -77,7 +77,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             update_account,
             get_transactions,
             add_transaction,
-            delete_transaction
+            delete_transaction,
+            update_transaction,
+            get_categories,
+            add_category,
+            update_category,
+            delete_category
         ])
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");
@@ -255,8 +260,8 @@ async fn update_account(
 /// ```
 #[tauri::command]
 async fn get_transactions(
-    account_id: i64,
     db: tauri::State<'_, SqlitePool>,
+    account_id: i64,
 ) -> Result<Vec<serde_json::Value>, String> {
     database::get_transactions(&*db, account_id)
         .await
@@ -311,12 +316,12 @@ async fn get_transactions(
 /// ```
 #[tauri::command]
 async fn add_transaction(
+    db: tauri::State<'_, SqlitePool>,
     account_id: i64,
     amount_cents: i64,
     transaction_type: String,
     description: String,
     transaction_date: String,
-    db: tauri::State<'_, SqlitePool>,
 ) -> Result<(), String> {
     database::add_transaction(
         &*db,
@@ -371,6 +376,141 @@ async fn delete_transaction(
     transaction_id: i64,
 ) -> Result<(), String> {
     database::delete_transaction(&*db, transaction_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Updates an existing transaction record with new values.
+///
+/// Modifies all fields of the specified transaction with the provided data.
+/// This replaces the entire transaction record, ensuring consistency across
+/// all transaction attributes. Useful for correcting transaction details or
+/// moving transactions between accounts.
+///
+/// # Arguments
+/// * `db` - SQLite connection pool managed by Tauri state
+/// * `transaction_id` - Database ID of the transaction to modify
+/// * `account_id` - New account ID this transaction belongs to
+/// * `amount_cents` - New transaction amount in cents (always positive)
+/// * `transaction_type` - New transaction type ("debit" or "credit")
+/// * `description` - New human-readable transaction description
+/// * `transaction_date` - New transaction date in ISO 8601 format (YYYY-MM-DD)
+///
+/// # Returns
+/// * `Ok(())` - Transaction updated successfully
+/// * `Err(String)` - Database error message for frontend display
+#[tauri::command]
+async fn update_transaction(
+    db: tauri::State<'_, SqlitePool>,
+    transaction_id: i64,
+    account_id: i64,
+    amount_cents: i64,
+    transaction_type: String,
+    description: String,
+    transaction_date: String,
+) -> Result<(), String> {
+    database::update_transaction(
+        &*db,
+        transaction_id,
+        account_id,
+        amount_cents,
+        transaction_type,
+        description,
+        transaction_date,
+    )
+    .await
+    .map_err(|e| e.to_string())
+}
+
+/// Retrieves all categories from the database for transaction categorization.
+///
+/// Returns category records as JSON-serializable values including hierarchical
+/// relationships. Categories include system categories like "Uncategorized" and
+/// user-defined categories for organizing transactions.
+///
+/// # Arguments
+/// * `db` - SQLite connection pool managed by Tauri state
+///
+/// # Returns
+/// * `Ok(Vec<serde_json::Value>)` - Array of category objects with id, name, and parent_id
+/// * `Err(String)` - Database error message for frontend display
+#[tauri::command]
+async fn get_categories(
+    db: tauri::State<'_, SqlitePool>,
+) -> Result<Vec<serde_json::Value>, String> {
+    database::get_all_categories(&*db)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Creates a new category for transaction organization.
+///
+/// Inserts a category record with optional parent relationship for hierarchical
+/// organization. Category names must be unique across the entire system to prevent
+/// confusion in transaction categorization.
+///
+/// # Arguments
+/// * `db` - SQLite connection pool managed by Tauri state
+/// * `name` - Unique category name (e.g., "Groceries", "Utilities")
+/// * `parent_id` - Optional parent category ID for hierarchical organization
+///
+/// # Returns
+/// * `Ok(())` - Category created successfully
+/// * `Err(String)` - Database error message for frontend display
+#[tauri::command]
+async fn add_category(
+    db: tauri::State<'_, SqlitePool>,
+    name: String,
+    parent_id: Option<i64>,
+) -> Result<(), String> {
+    database::add_category(&*db, name, parent_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Updates an existing category with new values.
+///
+/// Modifies category name and parent relationship. Useful for reorganizing
+/// category hierarchies or correcting category names. All transactions
+/// using this category remain properly linked.
+///
+/// # Arguments
+/// * `db` - SQLite connection pool managed by Tauri state
+/// * `category_id` - Database ID of the category to modify
+/// * `name` - New unique category name
+/// * `parent_id` - New parent category ID or None for root level
+///
+/// # Returns
+/// * `Ok(())` - Category updated successfully
+/// * `Err(String)` - Database error message for frontend display
+#[tauri::command]
+async fn update_category(
+    db: tauri::State<'_, SqlitePool>,
+    category_id: i64,
+    name: String,
+    parent_id: Option<i64>,
+) -> Result<(), String> {
+    database::update_category(&*db, category_id, name, parent_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Removes a category with automatic cleanup of dependent data.
+///
+/// Deletes the category and handles orphaned data by moving child categories
+/// up one level in the hierarchy and reassigning all transactions to the
+/// "Uncategorized" system category. Cannot delete the "Uncategorized" category itself.
+///
+/// # Arguments
+/// * `db` - SQLite connection pool managed by Tauri state
+/// * `category_id` - Database ID of the category to remove
+///
+/// # Returns
+/// * `Ok(())` - Category deleted successfully with cleanup completed
+/// * `Err(String)` - Database error message for frontend display
+#[tauri::command]
+async fn delete_category(db: tauri::State<'_, SqlitePool>, category_id: i64) -> Result<(), String> {
+    database::delete_category(&*db, category_id)
         .await
         .map_err(|e| e.to_string())
 }

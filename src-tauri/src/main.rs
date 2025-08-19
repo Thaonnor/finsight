@@ -322,6 +322,7 @@ async fn add_transaction(
     transaction_type: String,
     description: String,
     transaction_date: String,
+    category_id: i64,
 ) -> Result<(), String> {
     database::add_transaction(
         &*db,
@@ -330,6 +331,7 @@ async fn add_transaction(
         transaction_type,
         description,
         transaction_date,
+        category_id,
     )
     .await
     .map_err(|e| e.to_string())
@@ -408,6 +410,7 @@ async fn update_transaction(
     transaction_type: String,
     description: String,
     transaction_date: String,
+    category_id: i64,
 ) -> Result<(), String> {
     database::update_transaction(
         &*db,
@@ -417,6 +420,7 @@ async fn update_transaction(
         transaction_type,
         description,
         transaction_date,
+        category_id
     )
     .await
     .map_err(|e| e.to_string())

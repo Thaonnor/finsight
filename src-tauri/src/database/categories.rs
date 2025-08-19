@@ -165,7 +165,7 @@ async fn handle_orphaned_categories(
 
 /// Reassigns orphaned transactions when their category is deleted.
 ///
-/// Moves all transactions from the deleted category to the "Uncategorized" 
+/// Moves all transactions from the deleted category to the "Uncategorized"
 /// system category to prevent foreign key violations and ensure transaction
 /// data remains accessible. The "Uncategorized" category must exist in the
 /// database for this operation to succeed.
@@ -199,4 +199,124 @@ async fn handle_orphaned_transactions(
         .await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::SqlitePool;
+
+    async fn setup_test_db() -> SqlitePool {
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+        crate::database::create_tables(&pool).await.unwrap();
+        crate::database::migrations::run_migrations(&pool)
+            .await
+            .unwrap();
+        crate::database::seed_system_data(&pool).await.unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn test_add_category() {
+        let pool = setup_test_db().await;
+
+        add_category(&pool, "Groceries".to_string(), None)
+            .await
+            .unwrap();
+
+        let categories = get_all_categories(&pool).await.unwrap();
+        assert_eq!(categories.len(), 2); // 'Uncategorized', 'Groceries'
+
+        let groceries = categories
+            .iter()
+            .find(|c| c["name"] == "Groceries")
+            .unwrap();
+        assert_eq!(groceries["name"], "Groceries");
+        assert_eq!(groceries["parent_id"], serde_json::Value::Null);
+    }
+
+    #[tokio::test]
+    async fn test_update_category() {
+        let pool = setup_test_db().await;
+
+        add_category(&pool, "Original Name".to_string(), None)
+            .await
+            .unwrap();
+        update_category(&pool, 2, "Updated Name".to_string(), Some(1))
+            .await
+            .unwrap();
+
+        let categories = get_all_categories(&pool).await.unwrap();
+        let updated_category = categories.iter().find(|c| c["id"] == 2).unwrap();
+
+        assert_eq!(updated_category["name"], "Updated Name");
+        assert_eq!(updated_category["parent_id"], 1);
+    }
+
+    #[tokio::test]
+    async fn test_delete_category() {
+        let pool = setup_test_db().await;
+
+        add_category(&pool, "Groceries".to_string(), None).await.unwrap();
+
+        delete_category(&pool, 2).await.unwrap();
+
+        let categories = get_all_categories(&pool).await.unwrap();
+
+        assert_eq!(categories.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_delete_category_with_children() {
+        let pool = setup_test_db().await;
+
+        // Create: Uncategorized (1) -> Food (2) -> Groceries (3)
+        add_category(&pool, "Food".to_string(), None).await.unwrap(); // ID 2
+        add_category(&pool, "Groceries".to_string(), Some(2)).await.unwrap(); // ID 3, parent is Food
+
+        // Delete Food (2) - Groceries should become root-level
+        delete_category(&pool, 2).await.unwrap();
+
+        let categories = get_all_categories(&pool).await.unwrap();
+        let groceries = categories.iter().find(|c| c["name"] == "Groceries").unwrap();
+
+        assert_eq!(groceries["parent_id"], serde_json::Value::Null); // Should be promoted to root
+    }
+
+    #[tokio::test]
+    async fn test_delete_middle_category_with_children() {
+        let pool = setup_test_db().await;
+
+        // Create: Uncategorized (1) -> Food (2) -> Groceries (3) -> Organic (4)
+        add_category(&pool, "Food".to_string(), None).await.unwrap(); // ID 2
+        add_category(&pool, "Groceries".to_string(), Some(2)).await.unwrap(); // ID 3, parent is Food
+        add_category(&pool, "Organic".to_string(), Some(3)).await.unwrap(); // ID 4, parent is Groceries
+
+        // Delete Groceries(3) - Organic should inherit Food (2) as parent
+        delete_category(&pool, 3).await.unwrap();
+
+        let categories = get_all_categories(&pool).await.unwrap();
+        let organic = categories.iter().find(|c| c["name"] == "Organic").unwrap();
+
+        assert_eq!(organic["parent_id"], 2); // Should inherit Food as parent
+    }
+
+    #[tokio::test]
+    async fn test_delete_category_with_transactions() {
+        let pool = setup_test_db().await;
+
+        // Create account and category for the transaction
+        crate::database::add_account(&pool, "Test Account".to_string(), "checking".to_string()).await.unwrap();
+        add_category(&pool, "Food".to_string(), None).await.unwrap();
+
+        // Create transaction in Food category
+        crate::database::add_transaction(&pool, 1, -1000, "debit".to_string(), "groceries".to_string(), "2024-01-01".to_string(), 2).await.unwrap();
+
+        // Delete Food category - transaction should move to Uncategorized (ID 1)
+        delete_category(&pool, 2).await.unwrap();
+
+        // Verify transaction moved to Uncategorized
+        let transactions = crate::database::get_transactions(&pool, 1).await.unwrap();
+        assert_eq!(transactions[0]["category_id"], 1);
+    }
 }

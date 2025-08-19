@@ -7,7 +7,8 @@
         "build": "vite build",
         "tauri": "tauri",
         "tauri:dev": "tauri dev",
-        "docs": "cargo doc --manifest-path src-tauri/Cargo.toml --no-deps --open"
+        "docs": "cargo doc --manifest-path src-tauri/Cargo.toml --no-deps --open",
+        "test": "cargo test --manifest-path src-tauri/Cargo.toml"
     },
     "dependencies": {
         "@tauri-apps/api": "^2.7.0",

@@ -40,7 +40,7 @@ pub async fn get_transactions(
     pool: &SqlitePool,
     account_id: i64,
 ) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-    let transactions = sqlx::query("SELECT id, account_id, amount_cents, description, transaction_date FROM transactions WHERE account_id = ?").bind(account_id).fetch_all(pool).await?;
+    let transactions = sqlx::query("SELECT id, account_id, amount_cents, transaction_type, description, transaction_date, category_id FROM transactions WHERE account_id = ?").bind(account_id).fetch_all(pool).await?;
 
     let result: Vec<serde_json::Value> = transactions
         .into_iter()
@@ -49,8 +49,10 @@ pub async fn get_transactions(
                 "id": row.get::<i64, _>("id"),
                 "account_id": row.get::<i64, _>("account_id"),
                 "amount_cents": row.get::<i64, _>("amount_cents"),
+                "transaction_type": row.get::<String, _>("transaction_type"),
                 "description": row.get::<String, _>("description"),
-                "transaction_date": row.get::<String, _>("transaction_date")
+                "transaction_date": row.get::<String, _>("transaction_date"),
+                "category_id": row.get::<i64, _>("category_id")
             })
         })
         .collect();
@@ -114,6 +116,7 @@ pub async fn add_transaction(
     transaction_type: String,
     description: String,
     transaction_date: String,
+    category_id: i64,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
         r#"
@@ -122,8 +125,9 @@ pub async fn add_transaction(
         amount_cents,
         transaction_type,
         description,
-        transaction_date) 
-        VALUES (?, ?, ?, ?, ?)
+        transaction_date,
+        category_id) 
+        VALUES (?, ?, ?, ?, ?, ?)
     "#,
     )
     .bind(account_id)
@@ -131,6 +135,7 @@ pub async fn add_transaction(
     .bind(transaction_type)
     .bind(description)
     .bind(transaction_date)
+    .bind(category_id)
     .execute(pool)
     .await?;
 
@@ -237,6 +242,7 @@ pub async fn update_transaction(
     transaction_type: String,
     description: String,
     transaction_date: String,
+    category_id: i64,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
         r#"
@@ -245,17 +251,131 @@ pub async fn update_transaction(
             amount_cents = ?,
             transaction_type = ?,
             description = ?,
-            transaction_date = ?
-            WHERE id = ?"#,
+            transaction_date = ?,
+            category_id = ?
+            WHERE id = ?
+            "#,
     )
     .bind(account_id)
     .bind(amount_cents)
     .bind(transaction_type)
     .bind(description)
     .bind(transaction_date)
+    .bind(category_id)
     .bind(transaction_id)
     .execute(pool)
     .await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::SqlitePool;
+
+    async fn setup_test_db() -> SqlitePool {
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+        crate::database::create_tables(&pool).await.unwrap();
+        crate::database::migrations::run_migrations(&pool)
+            .await
+            .unwrap();
+        crate::database::seed_system_data(&pool).await.unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn test_add_transaction() {
+        let pool = setup_test_db().await;
+
+        crate::database::add_account(&pool, "Test Account".to_string(), "checking".to_string())
+            .await
+            .unwrap();
+        add_transaction(
+            &pool,
+            1,
+            1000,
+            "debit".to_string(),
+            "Groceries".to_string(),
+            "2025-01-01".to_string(),
+            1,
+        )
+        .await
+        .unwrap();
+
+        let transactions = get_transactions(&pool, 1).await.unwrap();
+        assert_eq!(transactions.len(), 1);
+        assert_eq!(transactions[0]["amount_cents"], 1000);
+        assert_eq!(transactions[0]["description"], "Groceries");
+        assert_eq!(transactions[0]["category_id"], 1);
+    }
+
+    #[tokio::test]
+    async fn test_update_transaction() {
+        let pool = setup_test_db().await;
+
+        crate::database::add_account(&pool, "Test Account".to_string(), "checking".to_string())
+            .await
+            .unwrap();
+
+        // Add initial transaction
+        add_transaction(
+            &pool,
+            1,
+            1000,
+            "debit".to_string(),
+            "Original Description".to_string(),
+            "2025-01-01".to_string(),
+            1,
+        )
+        .await
+        .unwrap();
+
+        // Update transaction
+        update_transaction(
+            &pool,
+            1,
+            1,
+            2000,
+            "credit".to_string(),
+            "Updated Description".to_string(),
+            "2025-01-02".to_string(),
+            1,
+        )
+        .await
+        .unwrap();
+
+        // Verify changes
+        let transactions = get_transactions(&pool, 1).await.unwrap();
+        assert_eq!(transactions[0]["amount_cents"], 2000);
+        assert_eq!(transactions[0]["transaction_type"], "credit");
+        assert_eq!(transactions[0]["description"], "Updated Description");
+        assert_eq!(transactions[0]["transaction_date"], "2025-01-02");
+    }
+
+    #[tokio::test]
+    async fn test_delete_transaction() {
+        let pool = setup_test_db().await;
+
+        crate::database::add_account(&pool, "Test Account".to_string(), "checking".to_string())
+            .await
+            .unwrap();
+
+        add_transaction(
+            &pool,
+            1,
+            1000,
+            "debit".to_string(),
+            "Groceries".to_string(),
+            "2025-01-01".to_string(),
+            1,
+        )
+        .await
+        .unwrap();
+
+        delete_transaction(&pool, 1).await.unwrap();
+        
+        let transactions = get_transactions(&pool, 1).await.unwrap();
+        assert_eq!(transactions.len(), 0);
+    }
 }

@@ -191,9 +191,37 @@ async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 /// * `Ok(())` - System data seeded successfully or already exists
 /// * `Err(sqlx::Error)` - Database insertion failure
 async fn seed_system_data(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    sqlx::query("INSERT OR IGNORE INTO categories (name, parent_id) VALUES ('Uncategorized', NULL)")
-        .execute(pool)
-        .await?;
+    sqlx::query(
+        "INSERT OR IGNORE INTO categories (name, parent_id) VALUES ('Uncategorized', NULL)",
+    )
+    .execute(pool)
+    .await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_init_db_creates_tables() {
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+
+        create_tables(&pool).await.unwrap();
+        migrations::run_migrations(&pool).await.unwrap();
+        seed_system_data(&pool).await.unwrap();
+
+        let result = sqlx::query("SELECT name FROM sqlite_master WHERE type = 'table'")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+        assert!(result.len() >= 4); // migrations, accounts, categories, transactions
+
+        let categories = sqlx::query("SELECT name FROM categories WHERE name = 'Uncategorized'")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+        assert_eq!(categories.len(), 1);
+    }
 }

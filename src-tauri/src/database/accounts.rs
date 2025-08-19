@@ -160,3 +160,57 @@ pub async fn update_account(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::SqlitePool;
+
+    async fn setup_test_db() -> SqlitePool {
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+        crate::database::create_tables(&pool).await.unwrap();
+        crate::database::migrations::run_migrations(&pool)
+            .await
+            .unwrap();
+        crate::database::seed_system_data(&pool).await.unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn test_add_account() {
+        let pool = setup_test_db().await;
+
+        add_account(&pool, "Test Checking".to_string(), "checking".to_string())
+            .await
+            .unwrap();
+
+        let accounts = get_all_accounts(&pool).await.unwrap();
+        assert_eq!(accounts.len(), 1);
+        assert_eq!(accounts[0]["name"], "Test Checking");
+        assert_eq!(accounts[0]["account_type"], "checking");
+    }
+
+    #[tokio::test]
+    async fn test_update_account() {
+        let pool = setup_test_db().await;
+
+        add_account(&pool, "Original Name".to_string(), "checking".to_string())
+            .await
+            .unwrap();
+
+        update_account(
+            &pool,
+            1,
+            "Updated Name".to_string(),
+            "savings".to_string(),
+            true,
+        )
+        .await
+        .unwrap();
+
+        let accounts = get_all_accounts(&pool).await.unwrap();
+        assert_eq!(accounts.len(), 1);
+        assert_eq!(accounts[0]["name"], "Updated Name");
+        assert_eq!(accounts[0]["account_type"], "savings");
+    }
+}

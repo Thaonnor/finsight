@@ -161,6 +161,44 @@ pub async fn update_account(
     Ok(())
 }
 
+pub async fn get_balance(
+    pool: &SqlitePool,
+    account_id: i64,
+) -> Result<i64, sqlx::Error> {
+    let account_type: String = sqlx::query_scalar("SELECT account_type FROM accounts WHERE id = ?").bind(account_id).fetch_one(pool).await?;
+
+    let transactions = sqlx::query("SELECT amount_cents, transaction_type FROM transactions WHERE account_id = ?").bind(account_id).fetch_all(pool).await?;
+
+    let mut balance: i64 = 0;
+
+    for row in transactions {
+        let amount: i64 = row.get("amount_cents");
+        let transaction_type: String = row.get("transaction_type");
+
+        match account_type.as_str() {
+            "checking" | "savings" => {
+                // Asset accounts: credits +, debits -
+                if transaction_type == "credit" {
+                    balance += amount;
+                } else {
+                    balance -= amount;
+                }
+            }
+            "credit" => {
+                // Liability accounts: credits -, debits +
+                if transaction_type == "credit" {
+                    balance -= amount;
+                } else {
+                    balance += amount;
+                }
+            }
+            _ => {} // Unknown account type, skip
+        }
+    }
+
+    Ok(balance)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

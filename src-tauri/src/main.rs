@@ -75,6 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             get_accounts,
             add_account,
             update_account,
+            get_balance,
             get_transactions,
             add_transaction,
             delete_transaction,
@@ -222,6 +223,13 @@ async fn update_account(
     archived: bool,
 ) -> Result<(), String> {
     database::update_account(&*db, account_id, name, account_type, archived)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_balance(db: tauri::State<'_, SqlitePool>, account_id: i64) -> Result<i64, String> {
+    database::get_balance(&*db, account_id)
         .await
         .map_err(|e| e.to_string())
 }
@@ -420,7 +428,7 @@ async fn update_transaction(
         transaction_type,
         description,
         transaction_date,
-        category_id
+        category_id,
     )
     .await
     .map_err(|e| e.to_string())

@@ -26,9 +26,15 @@ const routes = [
         component: () => import('../views/Import.vue'),
     },
     {
-        path: '/account/:id',
+        path: '/accounts/:id',
         name: 'AccountDetails',
         component: () => import('../views/AccountDetails.vue'),
+    },
+    {
+        path: '/reports',
+        name: 'Reports',
+        // TODO: Implement reports view
+        component: () => import('../views/Dashboard.vue'),
     }
 ];
 

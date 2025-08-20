@@ -118,7 +118,7 @@
     const fetchTransactions = async () => {
         try {
             loading.value = true;
-            const result = await invoke('get_transactions_by_account', {
+            const result = await invoke('get_transactions', {
                 accountId: parseInt(accountId),
             });
             transactions.value = result;

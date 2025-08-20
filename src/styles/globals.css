@@ -13,6 +13,10 @@
     --accent: #23B4D8;
     --on-accent: #000000;
 
+    /* borders */
+    --border: #4A4C50;
+    --border-dim: #2A2B2E;
+
     /* symantic */
     --positive: #4CC38A;
     --negative: #FF7A8A;

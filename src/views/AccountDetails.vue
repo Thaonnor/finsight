@@ -1,140 +1,124 @@
 <template>
-    <div>
-        <h1>Account {{ accountId }} Transactions</h1>
-
-        <button class="add-button" @click="showModal = true">
-            Add Transaction
-        </button>
-
-        <div v-if="loading">Loading transactions...</div>
-
-        <div v-else-if="transactions.length === 0" class="empty-state">
-            <p>
-                No transactions yet. Add your first transaction to get started!
-            </p>
+    <div class="account-details">
+        <div class="account-header">
+            <h1>Account Name Here</h1>
+            <div class="account-balance">
+                <span>Account Balance: {{ balance }}</span>
+            </div>
         </div>
 
-        <table v-else class="transactions-table">
+        <table class="transactions">
             <thead>
                 <tr>
                     <th>Date</th>
                     <th>Description</th>
+                    <th>Category</th>
                     <th>Type</th>
                     <th>Amount</th>
+                    <th>Options</th>
                 </tr>
             </thead>
             <tbody>
-                <tr
-                    v-for="transaction in transactionsWithBalance"
-                    :key="transaction.id"
-                >
-                    <td>{{ formatDate(transaction.date) }}</td>
+                <tr v-for="transaction in transactions" :key="transaction.id">
+                    <td>{{ transaction.transaction_date }}</td>
                     <td>{{ transaction.description }}</td>
+                    <td>{{ transaction.category_id }}</td>
                     <td>{{ transaction.transaction_type }}</td>
-                    <td
-                        class="amount"
-                        :class="getAmountClass(transaction.transaction_type)"
-                    >
-                        {{
-                            formatAmount(
-                                transaction.amount_cents,
-                                transaction.transaction_type
-                            )
-                        }}
-                    </td>
-                    <td class="balance">
-                        {{ formatCurrency(transaction.running_balance) }}
-                    </td>
+                    <td>{{ formatCurrency(transaction.amount_cents) }}</td>
+                    <td></td>
                 </tr>
             </tbody>
         </table>
     </div>
-
-    <AddTransactionModal
-        v-if="showModal"
-        :accountId="parseInt(accountId)"
-        @close="showModal = false"
-        @transactionAdded="handleTransactionAdded"
-    />
 </template>
 
 <script setup>
-    import { ref, onMounted, computed } from 'vue';
-    import { useRoute } from 'vue-router';
     import { invoke } from '@tauri-apps/api/core';
-    import AddTransactionModal from '../components/AddTransactionModal.vue';
+    import { ref, computed, onMounted } from 'vue';
+    import { useRoute } from 'vue-router';
+    import { formatCurrency } from '../utils/utils.js';
 
     const route = useRoute();
 
+    const accountId = computed(() => route.params.id);
+    console.log(`AccountId: ${accountId.value}`);
+    const accountName = ref('');
     const transactions = ref([]);
-    const loading = ref(true);
-    const showModal = ref(false);
+    const balance = ref(0);
 
-    const accountId = route.params.id;
+    onMounted(async () => {
+        const fetchAccountName = async () => {
+            // TODO: Get account - single account, need to write that
+        };
 
-    const transactionsWithBalance = computed(() => {
-        if (transactions.value.length === 0) return [];
-
-        const sorted = [...transactions.value].sort(
-            (a, b) => new Date(a.date) - new Date(b.date)
-        );
-
-        let runningBalance = 0;
-        const withBalances = sorted.map((transaction) => {
-            if (transaction.transaction_type === 'debit') {
-                runningBalance -= transaction.amount_cents;
-            } else {
-                runningBalance += transaction.amount_cents;
-            }
-
-            return {
-                ...transaction,
-                running_balance: runningBalance,
-            };
-        });
-
-        return withBalances.reverse();
-    });
-
-    const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString();
-    };
-
-    const formatAmount = (amountCents, transactionType) => {
-        const amount = Math.abs(amountCents) / 100;
-        const sign = transactionType === 'debit' ? '-' : '+';
-        return `${sign}$${amount.toFixed(2)}`;
-    };
-
-    const formatCurrency = (amountCents) => {
-        const amount = amountCents / 100;
-        return `$${amount.toFixed(2)}`;
-    };
-
-    const getAmountClass = (transactionType) => {
-        return transactionType === 'debit' ? 'negative' : 'positive';
-    };
-
-    const fetchTransactions = async () => {
-        try {
-            loading.value = true;
-            const result = await invoke('get_transactions', {
-                accountId: parseInt(accountId),
+        const fetchTransactions = async () => {
+            let result = await invoke('get_transactions', {
+                accountId: parseInt(accountId.value),
             });
+            console.log(transactions);
             transactions.value = result;
-        } catch (error) {
-            console.error('Error fetching transactions:', error);
-        } finally {
-            loading.value = false;
-        }
-    };
+        };
 
-    const handleTransactionAdded = async () => {
+        const fetchBalance = async () => {};
+
+        // await fetchAccountName();
         await fetchTransactions();
-        showModal.value = false;
-    };
-
-    onMounted(() => {
-        fetchTransactions();
+        await fetchBalance();
     });
 </script>
+
+<style scoped>
+    .account-details {
+        padding: 32px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .account-header {
+        margin-bottom: 32px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--border-dim);
+    }
+
+    .account-header h1 {
+        color: var(--text);
+        margin-bottom: 8px;
+    }
+
+    .account-balance {
+        color: var(--text-dim);
+        font-size: 14px;
+    }
+
+    .transactions {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--surface-1);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .transactions th {
+        background: var(--surface-2);
+        color: var(--text);
+        font-weight: 500;
+        text-align: left;
+        padding: 16px;
+        font-size: 14px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .transactions td {
+        padding: 16px;
+        color: var(--text);
+        border-bottom: 1px solid var(--border-dim);
+    }
+
+    .transactions tr:last-child td {
+        border-bottom: none;
+    }
+
+    .transactions tr:hover {
+        background: var(--surface-2);
+    }
+</style>

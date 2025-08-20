@@ -1,9 +1,9 @@
 //! # Development Note
-//! 
+//!
 //! Migration system is currently hibernated during active development.
 //! Schema changes are handled via create_tables() and database deletion.
 //! Will resume migrations when moving to production with real user data.
-//! 
+//!
 //! Database migration system for the finsight personal finance application.
 //!
 //! Provides automatic schema evolution through versioned migrations that run
@@ -96,12 +96,13 @@ use sqlx::{Row, SqlitePool};
 pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     let applied = get_applied_migrations(pool).await?;
 
-    let migration_registry = vec!["001_add_archived_column"];
+    let migration_registry = vec!["001_add_archived_column", "002_convert_amounts_to_signed_values"];
 
     for name in migration_registry {
         if !applied.contains(&name.to_string()) {
             match name {
                 "001_add_archived_column" => migration_001_add_archived_column(pool).await?,
+                "002_convert_amounts_to_signed_values" => migration_002_convert_amounts_to_signed_values(pool).await?,
                 _ => panic!("Unknown migration: {}", name),
             }
             record_migration(pool, name).await?;
@@ -236,6 +237,18 @@ async fn migration_001_add_archived_column(pool: &SqlitePool) -> Result<(), sqlx
     sqlx::query("ALTER TABLE accounts ADD COLUMN archived BOOLEAN NOT NULL DEFAULT FALSE")
         .execute(pool)
         .await?;
+
+    Ok(())
+}
+
+async fn migration_002_convert_amounts_to_signed_values(
+    pool: &SqlitePool,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE transactions SET amount_cents = -amount_cents WHERE transaction_type = 'debit'",
+    )
+    .execute(pool)
+    .await?;
 
     Ok(())
 }

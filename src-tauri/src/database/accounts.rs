@@ -165,35 +165,13 @@ pub async fn get_balance(
     pool: &SqlitePool,
     account_id: i64,
 ) -> Result<i64, sqlx::Error> {
-    let account_type: String = sqlx::query_scalar("SELECT account_type FROM accounts WHERE id = ?").bind(account_id).fetch_one(pool).await?;
-
-    let transactions = sqlx::query("SELECT amount_cents, transaction_type FROM transactions WHERE account_id = ?").bind(account_id).fetch_all(pool).await?;
+    let transactions = sqlx::query("SELECT amount_cents FROM transactions WHERE account_id = ?").bind(account_id).fetch_all(pool).await?;
 
     let mut balance: i64 = 0;
 
     for row in transactions {
         let amount: i64 = row.get("amount_cents");
-        let transaction_type: String = row.get("transaction_type");
-
-        match account_type.as_str() {
-            "checking" | "savings" => {
-                // Asset accounts: credits +, debits -
-                if transaction_type == "credit" {
-                    balance += amount;
-                } else {
-                    balance -= amount;
-                }
-            }
-            "credit" => {
-                // Liability accounts: credits -, debits +
-                if transaction_type == "credit" {
-                    balance -= amount;
-                } else {
-                    balance += amount;
-                }
-            }
-            _ => {} // Unknown account type, skip
-        }
+        balance += amount;
     }
 
     Ok(balance)
@@ -250,5 +228,17 @@ mod tests {
         assert_eq!(accounts.len(), 1);
         assert_eq!(accounts[0]["name"], "Updated Name");
         assert_eq!(accounts[0]["account_type"], "savings");
+    }
+
+    #[tokio::test]
+    async fn test_get_balance() {
+        let pool = setup_test_db().await;
+
+        add_account(&pool, "Test Checking".to_string(), "checking".to_string()).await.unwrap();
+        crate::database::add_transaction(&pool, 1, 50000, "credit".to_string(), "Salary deposit".to_string(), "2025-01-15".to_string(), 1).await.unwrap();
+        crate::database::add_transaction(&pool, 1, -15000, "debit".to_string(), "Grocery store".to_string(), "2025-01-16".to_string(), 1).await.unwrap();
+
+        let balance = get_balance(&pool, 1).await.unwrap();
+        assert_eq!(balance, 35000)
     }
 }

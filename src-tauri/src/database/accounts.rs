@@ -51,6 +51,24 @@ pub async fn get_all_accounts(pool: &SqlitePool) -> Result<Vec<serde_json::Value
     Ok(result)
 }
 
+pub async fn get_account(
+    pool: &SqlitePool,
+    account_id: i64,
+) -> Result<serde_json::Value, sqlx::Error> {
+    let row = sqlx::query("SELECT id, name, account_type FROM accounts WHERE id = ?")
+        .bind(account_id)
+        .fetch_one(pool)
+        .await?;
+
+    let account = serde_json::json!({
+        "id": row.get::<i64, _>("id"),
+        "name": row.get::<String, _>("name"),
+        "account_type": row.get::<String, _>("account_type")
+    });
+
+    Ok(account)
+}
+
 /// Creates a new financial account in the database.
 ///
 /// Inserts a new account record with the provided name and type. The creation
@@ -161,11 +179,11 @@ pub async fn update_account(
     Ok(())
 }
 
-pub async fn get_balance(
-    pool: &SqlitePool,
-    account_id: i64,
-) -> Result<i64, sqlx::Error> {
-    let transactions = sqlx::query("SELECT amount_cents FROM transactions WHERE account_id = ?").bind(account_id).fetch_all(pool).await?;
+pub async fn get_balance(pool: &SqlitePool, account_id: i64) -> Result<i64, sqlx::Error> {
+    let transactions = sqlx::query("SELECT amount_cents FROM transactions WHERE account_id = ?")
+        .bind(account_id)
+        .fetch_all(pool)
+        .await?;
 
     let mut balance: i64 = 0;
 
@@ -234,9 +252,31 @@ mod tests {
     async fn test_get_balance() {
         let pool = setup_test_db().await;
 
-        add_account(&pool, "Test Checking".to_string(), "checking".to_string()).await.unwrap();
-        crate::database::add_transaction(&pool, 1, 50000, "credit".to_string(), "Salary deposit".to_string(), "2025-01-15".to_string(), 1).await.unwrap();
-        crate::database::add_transaction(&pool, 1, -15000, "debit".to_string(), "Grocery store".to_string(), "2025-01-16".to_string(), 1).await.unwrap();
+        add_account(&pool, "Test Checking".to_string(), "checking".to_string())
+            .await
+            .unwrap();
+        crate::database::add_transaction(
+            &pool,
+            1,
+            50000,
+            "credit".to_string(),
+            "Salary deposit".to_string(),
+            "2025-01-15".to_string(),
+            1,
+        )
+        .await
+        .unwrap();
+        crate::database::add_transaction(
+            &pool,
+            1,
+            -15000,
+            "debit".to_string(),
+            "Grocery store".to_string(),
+            "2025-01-16".to_string(),
+            1,
+        )
+        .await
+        .unwrap();
 
         let balance = get_balance(&pool, 1).await.unwrap();
         assert_eq!(balance, 35000)

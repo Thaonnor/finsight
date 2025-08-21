@@ -26,6 +26,14 @@
                 </div>
 
                 <div class="form-field">
+                    <label for="category">Category</label>
+                    <select id="category" v-model="categoryId" required>
+                        <option value="1">Uncategorized</option>
+                        <option value="2">Groceries</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
                     <label for="description">Description</label>
                     <input
                         id="description"
@@ -72,20 +80,28 @@
 
     const amount = ref('');
     const transactionType = ref('');
+    const categoryId = ref(1);
     const description = ref('');
     const transactionDate = ref(new Date().toISOString().split('T')[0]);
 
     const handleSubmit = async () => {
         try {
             const amountCents = Math.round(parseFloat(amount.value) * 100);
+            const signedAmount =
+                transactionType.value === 'debit' ? -amountCents : amountCents;
 
-            await invoke('add_transaction', {
-                accountId: props.accountId,
-                amountCents: amountCents,
+            const payload = {
+                accountId: parseInt(props.accountId),
+                amountCents: signedAmount,
                 transactionType: transactionType.value,
                 description: description.value,
                 transactionDate: transactionDate.value,
-            });
+                categoryId: categoryId.value,
+            }
+
+            console.log(payload);
+
+            await invoke('add_transaction', payload);
 
             emit('transactionAdded');
         } catch (error) {

@@ -73,6 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .manage(pool)
         .invoke_handler(tauri::generate_handler![
             get_accounts,
+            get_account,
             add_account,
             update_account,
             get_balance,
@@ -120,6 +121,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[tauri::command]
 async fn get_accounts(db: tauri::State<'_, SqlitePool>) -> Result<Vec<serde_json::Value>, String> {
     database::get_all_accounts(&*db)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_account(
+    db: tauri::State<'_, SqlitePool>,
+    account_id: i64,
+) -> Result<serde_json::Value, String> {
+    database::get_account(&*db, account_id)
         .await
         .map_err(|e| e.to_string())
 }

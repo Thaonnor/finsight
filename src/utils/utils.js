@@ -7,11 +7,11 @@ export const formatCurrency = (cents) => {
         return '-';
     }
 
-    let dollars = (cents / 100).toFixed(2);
+    let dollars = (Math.abs(cents) / 100).toFixed(2);
 
-    if (dollars < 0) {
-        return `(${dollars})`;
-    }
+    return `$${dollars}`;
+};
 
-    return `${dollars}`;
+export const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString();
 };

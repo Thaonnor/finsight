@@ -11,9 +11,12 @@
         "test": "cargo test --manifest-path src-tauri/Cargo.toml"
     },
     "dependencies": {
+        "@mdi/font": "^7.4.47",
         "@tauri-apps/api": "^2.7.0",
+        "vite-plugin-vuetify": "^2.1.2",
         "vue": "^3.4.0",
-        "vue-router": "4.2.0"
+        "vue-router": "4.2.0",
+        "vuetify": "^3.9.5"
     },
     "devDependencies": {
         "@tauri-apps/cli": "^2.0.0",

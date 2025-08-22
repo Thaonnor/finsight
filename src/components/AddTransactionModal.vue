@@ -1,72 +1,39 @@
 <template>
-    <div class="modal-overlay" @click="$emit('close')">
-        <div class="modal-content" @click.stop>
-            <h2>Add Transaction</h2>
-
-            <form @submit.prevent="handleSubmit">
-                <div class="form-field">
-                    <label for="amount">Amount ($)</label>
-                    <input
-                        id="amount"
+    <v-dialog v-model="dialog" max-width="500px">
+        <v-card>
+            <v-card-title>Add Transaction</v-card-title>
+            <v-card-text>
+                <v-form @submit.prevent="handleSubmit">
+                    <v-number-input
                         v-model="amount"
-                        type="number"
-                        step="0.01"
+                        label="Amount ($)"
+                        :step="0.01"
+                        :min="0"
+                        :precision="2"
                         required
-                        autocomplete="off"
+                        control-variant="hidden"
                     />
-                </div>
 
-                <div class="form-field">
-                    <label for="type">Type</label>
-                    <select id="type" v-model="transactionType" required>
-                        <option value="">Select type</option>
-                        <option value="debit">Debit</option>
-                        <option value="credit">Credit</option>
-                    </select>
-                </div>
-
-                <div class="form-field">
-                    <label for="category">Category</label>
-                    <select id="category" v-model="categoryId" required>
-                        <option value="1">Uncategorized</option>
-                        <option value="2">Groceries</option>
-                    </select>
-                </div>
-
-                <div class="form-field">
-                    <label for="description">Description</label>
-                    <input
-                        id="description"
-                        v-model="description"
-                        type="text"
-                        required
-                        autocomplete="off"
-                    />
-                </div>
-
-                <div class="form-field">
-                    <label for="date">Date</label>
-                    <input
-                        id="date"
-                        v-model="transactionDate"
-                        type="date"
+                    <v-select 
+                        v-model="transactionType"
+                        label="Type"
+                        :items="[
+                            {title: 'Debit', value: 'debit'},
+                            {title: 'Credit', value: 'credit'}
+                        ]"
                         required
                     />
-                </div>
-
-                <div class="form-actions">
-                    <button type="button" @click="$emit('close')">
-                        Cancel
-                    </button>
-                    <button type="submit">Add Transaction</button>
-                </div>
-            </form>
-        </div>
-    </div>
+                </v-form>
+            </v-card-text>
+            <v-card-actions>
+                <!-- buttons will go here -->
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 </template>
 
 <script setup>
-    import { ref } from 'vue';
+    import { ref, onMounted } from 'vue';
     import { invoke } from '@tauri-apps/api/core';
 
     const props = defineProps({
@@ -77,12 +44,16 @@
     });
 
     const emit = defineEmits(['close', 'transactionAdded']);
-
-    const amount = ref('');
+    const dialog = ref(false);
+    const amount = ref(null);
     const transactionType = ref('');
     const categoryId = ref(1);
     const description = ref('');
     const transactionDate = ref(new Date().toISOString().split('T')[0]);
+
+    onMounted(() => {
+        dialog.value = true;
+    });
 
     const handleSubmit = async () => {
         try {
@@ -97,7 +68,7 @@
                 description: description.value,
                 transactionDate: transactionDate.value,
                 categoryId: categoryId.value,
-            }
+            };
 
             console.log(payload);
 

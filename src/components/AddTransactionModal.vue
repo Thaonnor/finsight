@@ -4,6 +4,9 @@
             <h2>Add Transaction</h2>
 
             <form @submit.prevent="handleSubmit">
+                
+                <q-input v-model="amount" label="Amount ($)" type="number" step="0.01" filled dark/>
+                
                 <div class="form-field">
                     <label for="amount">Amount ($)</label>
                     <input

@@ -11,7 +11,9 @@
         "test": "cargo test --manifest-path src-tauri/Cargo.toml"
     },
     "dependencies": {
+        "@primeuix/themes": "^1.2.3",
         "@tauri-apps/api": "^2.7.0",
+        "primevue": "^4.3.7",
         "vue": "^3.4.0",
         "vue-router": "4.2.0"
     },

@@ -1,5 +1,14 @@
 <template>
-    <div class="modal-overlay" @click="$emit('close')">
+    <Dialog
+        v-model:visible="visible"
+        modal
+        header="Add Transaction"
+        :style="{ width: '25rem' }"
+        @hide="handleClose"
+    >
+        <p>Hello</p>
+    </Dialog>
+    <!-- <div class="modal-overlay" @click="$emit('close')">
         <div class="modal-content" @click.stop>
             <h2>Add Transaction</h2>
 
@@ -62,12 +71,13 @@
                 </div>
             </form>
         </div>
-    </div>
+    </div> -->
 </template>
 
 <script setup>
-    import { ref } from 'vue';
+    import { ref, onMounted } from 'vue';
     import { invoke } from '@tauri-apps/api/core';
+    import Dialog from 'primevue/dialog';
 
     const props = defineProps({
         accountId: {
@@ -83,6 +93,16 @@
     const categoryId = ref(1);
     const description = ref('');
     const transactionDate = ref(new Date().toISOString().split('T')[0]);
+    const visible = ref(false);
+
+    onMounted(() => {
+        visible.value = true;
+    });
+
+    const handleClose = () => {
+        visible.value = false;
+        emit('close');
+    };
 
     const handleSubmit = async () => {
         try {
@@ -97,7 +117,7 @@
                 description: description.value,
                 transactionDate: transactionDate.value,
                 categoryId: categoryId.value,
-            }
+            };
 
             console.log(payload);
 
@@ -111,7 +131,7 @@
 </script>
 
 <style scoped>
-    .modal-overlay {
+    /* .modal-overlay {
         position: fixed;
         inset: 0;
         background: rgba(0, 0, 0, 0.5);
@@ -193,5 +213,42 @@
 
     input[type='number'] {
         -moz-appearance: textfield;
+    } */
+
+    :deep(.p-dialog-mask) {
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    :deep(.p-dialog) {
+        background: var(--surface-1);
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    :deep(.p-dialog-header) {
+        padding: 1.5rem 1.5rem 0 1.5rem;
+        color: var(--accent);
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+
+    :deep(.p-dialog-content) {
+        padding: 1.5rem;
+        color: var(--text);
+    }
+
+    .p-dialog-mask {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 </style>

@@ -1,66 +1,48 @@
 <template>
     <div class="modal-overlay" @click="$emit('close')">
         <div class="modal-content" @click.stop>
-            <h2>Add Transaction</h2>
+            <el-card>
+                <h2>Add Transaction</h2>
+            
 
             <form @submit.prevent="handleSubmit">
-                <div class="form-field">
-                    <label for="amount">Amount ($)</label>
-                    <input
-                        id="amount"
+                <el-form-item label="Amount ($)">
+                    <el-input
                         v-model="amount"
+                        placeholder="Amount ($)"
                         type="number"
                         step="0.01"
-                        required
-                        autocomplete="off"
                     />
-                </div>
+                </el-form-item>
 
-                <div class="form-field">
-                    <label for="type">Type</label>
-                    <select id="type" v-model="transactionType" required>
-                        <option value="">Select type</option>
-                        <option value="debit">Debit</option>
-                        <option value="credit">Credit</option>
-                    </select>
-                </div>
+                <el-form-item label="Type">
+                    <el-select v-model="transactionType" placeholder="Select type">
+                        <el-option label="Debit" value="debit" />
+                        <el-option label="Credit" value="credit" />
+                    </el-select>
+                </el-form-item>
 
-                <div class="form-field">
-                    <label for="category">Category</label>
-                    <select id="category" v-model="categoryId" required>
-                        <option value="1">Uncategorized</option>
-                        <option value="2">Groceries</option>
-                    </select>
-                </div>
+                <el-form-item label="Category">
+                    <el-select v-model="categoryId" placeholder="Select category">
+                        <el-option label="Uncategorize" value="1" />
+                        <el-option label="Groceries" value="2" />
+                    </el-select>
+                </el-form-item>
 
-                <div class="form-field">
-                    <label for="description">Description</label>
-                    <input
-                        id="description"
-                        v-model="description"
-                        type="text"
-                        required
-                        autocomplete="off"
-                    />
-                </div>
+                <el-form-item label="Description">
+                    <el-input v-model="description" placeholder="Description"/>
+                </el-form-item>
 
-                <div class="form-field">
-                    <label for="date">Date</label>
-                    <input
-                        id="date"
-                        v-model="transactionDate"
-                        type="date"
-                        required
-                    />
-                </div>
+                <el-form-item label="Date">
+                    <el-date-picker v-model="transactionDate" type="date" placeholder="Pick a date" />
+                </el-form-item>
 
                 <div class="form-actions">
-                    <button type="button" @click="$emit('close')">
-                        Cancel
-                    </button>
-                    <button type="submit">Add Transaction</button>
+                    <el-button @click="$emit('close')">Cancel</el-button>
+                    <el-button type="primary" @click="handleSubmit">Add Transaction</el-button>
                 </div>
             </form>
+            </el-card>
         </div>
     </div>
 </template>
@@ -97,7 +79,7 @@
                 description: description.value,
                 transactionDate: transactionDate.value,
                 categoryId: categoryId.value,
-            }
+            };
 
             console.log(payload);
 
@@ -137,29 +119,6 @@
         margin-bottom: 16px;
     }
 
-    .form-field label {
-        display: block;
-        margin-bottom: 4px;
-        font-size: 14px;
-    }
-
-    .form-field input,
-    .form-field select {
-        width: 100%;
-        padding: 8px 12px;
-        background: var(--bg);
-        border: 1px solid var(--text-disabled);
-        border-radius: 4px;
-        color: var(--text);
-        font-size: 16px;
-        box-sizing: border-box;
-    }
-
-    .form-field input:focus,
-    .form-field select:focus {
-        border-color: var(--accent);
-        outline: none;
-    }
     .form-actions {
         display: flex;
         gap: 12px;
@@ -167,31 +126,17 @@
         margin-top: 24px;
     }
 
-    button {
-        padding: 8px 16px;
-        border: none;
-        border-radius: 4px;
-        font-size: 16px;
-        cursor: pointer;
+    :deep(.el-form-item) {
+        display: block;
     }
 
-    button[type='button'] {
-        background: var(--bg);
-        color: var(--text);
+    :deep(.el-form-item__label) {
+        display: block;
+        margin-bottom: 8px;
+        width: 100% !important;
     }
 
-    button[type='submit'] {
-        background: var(--accent);
-        color: var(--on-accent);
-    }
-
-    input[type='number']::-webkit-outer-spin-button,
-    input[type='number']::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-
-    input[type='number'] {
-        -moz-appearance: textfield;
+    :deep(.el-form-item__content) {
+        margin-left: 0 !important;
     }
 </style>

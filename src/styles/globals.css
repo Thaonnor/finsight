@@ -27,6 +27,14 @@
     --warning: #F5B947;
 }
 
+html {
+    color-scheme: dark;
+}
+
+.dark {
+    color-scheme: dark;
+}
+
 /* base styling */
 body {
     font-family: 'Inter', sans-serif;

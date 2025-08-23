@@ -1,7 +1,7 @@
 <template>
     <v-app>
         <v-navigation-drawer permanent>
-            <Sidebar />
+            <AppSidebar />
         </v-navigation-drawer>
         <v-main>
             <router-view />
@@ -10,7 +10,7 @@
 </template>
 
 <script setup>
-    import Sidebar from './components/Sidebar.vue';
+    import AppSidebar from './components/AppSidebar.vue';
 </script>
 
 <style>

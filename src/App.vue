@@ -1,12 +1,12 @@
 <template>
-    <div id="app">
-        <div class="layout">
+    <v-app>
+        <v-navigation-drawer permanent>
             <Sidebar />
-            <main class="content">
-                <router-view />
-            </main>
-        </div>
-    </div>
+        </v-navigation-drawer>
+        <v-main>
+            <router-view />
+        </v-main>
+    </v-app>
 </template>
 
 <script setup>
@@ -14,13 +14,7 @@
 </script>
 
 <style>
-    .layout {
-        display: flex;
-        height: 100vh;
-    }
-
-    .content {
-        flex: 1;
-        padding: 20px;
+    html {
+        overflow-y: hidden;
     }
 </style>

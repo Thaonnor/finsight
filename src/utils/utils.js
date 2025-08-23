@@ -7,9 +7,25 @@ export const formatCurrency = (cents) => {
         return '-';
     }
 
-    let dollars = (Math.abs(cents) / 100).toFixed(2);
+    return (Math.abs(cents) / 100).toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD',
+    });
+};
 
-    return `$${dollars}`;
+export const formatBalance = (cents) => {
+    if (typeof cents !== 'number') {
+        throw new Error('Value must be a number');
+    }
+
+    if (cents == 0) {
+        return '$0.00';
+    }
+
+    return (cents / 100).toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD',
+    });
 };
 
 export const formatDate = (dateString) => {

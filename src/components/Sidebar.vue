@@ -1,28 +1,22 @@
 <template>
-    <nav class="sidebar">
-        <h1>finsight</h1>
-        <ul>
-            <li><router-link to="/">Dashboard</router-link></li>
-            <li><router-link to="/reports">Reports</router-link></li>
-            <li><router-link to="/accounts">Accounts</router-link></li>
-            <li>
-                <router-link to="/categories">Categories</router-link>
-            </li>
-            <li><router-link to="/import">Import</router-link></li>
-        </ul>
-
-        <hr />
-
-        <div class="accounts-section">
-            <AccountNavItem
-                v-for="account in accounts"
-                :key="account.id"
-                :accountName="account.name"
-                :accountBalance="account.balance"
-                :accountId="account.id"
-            />
-        </div>
-    </nav>
+    <v-toolbar>
+        <v-toolbar-title>finsight</v-toolbar-title>
+    </v-toolbar>
+    <v-list>
+        <v-list-item to="/" title="Dashboard" />
+        <v-list-item to="/accounts" title="Accounts" />
+        <v-list-item to="/categories" title="Categories" />
+        <v-list-item to="/import" title="Import" />
+        <v-divider thickness="2"/>
+        <v-list-subheader title="Accounts" class="text-uppercase"/>
+        <AccountNavItem 
+            v-for="account in accounts"
+            :key="account.id"
+            :account-name="account.name"
+            :account-balance="account.balance"
+            :account-id="account.id"
+        />
+    </v-list>
 </template>
 
 <script setup>

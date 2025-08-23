@@ -8,7 +8,7 @@
                 <div class="balance-display">
                     <span class="balance-label">Balance</span>
                     <span class="balance-amount">{{
-                        formatCurrency(balance)
+                        formatBalance(balance)
                     }}</span>
                 </div>
                 <button class="add-transaction-btn" @click="showModal = true">
@@ -69,7 +69,7 @@
     import { invoke } from '@tauri-apps/api/core';
     import { ref, computed, onMounted } from 'vue';
     import { useRoute } from 'vue-router';
-    import { formatCurrency, formatDate } from '../utils/utils.js';
+    import { formatCurrency, formatDate, formatBalance } from '../utils/utils.js';
     import AddTransactionModal from '../components/AddTransactionModal.vue';
 
     const route = useRoute();

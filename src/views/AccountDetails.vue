@@ -1,62 +1,65 @@
 <template>
-    <div class="account-details">
-        <div class="account-header">
-            <div class="header-left">
+    <v-container fill-height class="d-flex flex-column">
+        <v-row>
+            <v-col>
                 <h1>{{ accountName }}</h1>
-            </div>
-            <div class="header-right">
+            </v-col>
+            <v-col cols="auto">
                 <div class="balance-display">
                     <span class="balance-label">Balance</span>
-                    <span class="balance-amount">{{
-                        formatBalance(balance)
-                    }}</span>
-                </div>
-                <button class="add-transaction-btn" @click="showModal = true">
-                    Add Transaction
-                </button>
-            </div>
-        </div>
-        <div v-if="loading">Loading transactions...</div>
-
-        <div v-else-if="transactions.length === 0" class="empty-state">
-            <p>
-                No transactions yet. Add your first transaction to get started!
-            </p>
-        </div>
-
-        <table v-else class="transactions">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Description</th>
-                    <th>Category</th>
-                    <th>Type</th>
-                    <th class="amount-column">Amount</th>
-                    <th>Options</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="transaction in transactions" :key="transaction.id">
-                    <td>{{ formatDate(transaction.transaction_date) }}</td>
-                    <td>{{ transaction.description }}</td>
-                    <td>{{ transaction.category_id }}</td>
-                    <td>{{ transaction.transaction_type }}</td>
-                    <td
-                        class="amount-column"
-                        :class="
-                            transaction.amount_cents >= 0
-                                ? 'amount-positive'
-                                : 'amount-negative'
-                        "
+                    <span
+                        :class="[
+                            'balance-amount',
+                            balance >= 0 ? 'text-success' : 'text-error',
+                        ]"
+                        >{{ formatBalance(balance) }}</span
                     >
-                        {{ formatCurrency(transaction.amount_cents) }}
-                    </td>
-                    <td></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
+                </div>
+                <v-btn color="primary" @click="showModal = true">
+                    Add Transaction
+                </v-btn>
+            </v-col>
+        </v-row>
+        <v-row class="flex-grow-1 overflow-auto">
+            <v-col v-if="loading">
+                <v-skeleton-loader
+                    type="table-heading, table-thead, table-row-divider@6"
+                />
+            </v-col>
+            <v-col v-else-if="transactions.length === 0">
+                <v-card variant="outlined" class="text-center pa-8">
+                    <v-card-title>No transactions yet</v-card-title>
+                    <v-card-text
+                        >Add your first transaction to get started!</v-card-text
+                    >
+                    <v-card-actions class="justify-center">
+                        <v-btn color="primary" @click="showModal = true"
+                            >Add Transaction</v-btn
+                        >
+                    </v-card-actions>
+                </v-card>
+            </v-col>
+            <v-col v-else>
+                <v-data-table
+                    :headers="headers"
+                    :items="transactions"
+                >
+                    <template v-slot:item.transaction_date=" { item }">
+                        {{ formatDate(item.transaction_date) }}
+                    </template>
+                    <template v-slot:item.amount_cents="{ item }">
+                        <span :class="item.amount_cents >= 0 ? 'text-success' : 'text-error'">
+                            {{ formatCurrency(item.amount_cents) }}
+                        </span>
+                    </template>
+                    <template v-slot:item.actions="{ item }">
+                        <v-btn icon="mdi-pencil" size="small" variant="text" />
+                        <v-btn icon="mdi-delete" size="small" variant="text" />
+                    </template>
+                </v-data-table>
+            </v-col>
+        </v-row>
+    </v-container>
     <AddTransactionModal
         v-if="showModal"
         :accountId="Number(route.params.id)"
@@ -69,7 +72,11 @@
     import { invoke } from '@tauri-apps/api/core';
     import { ref, computed, onMounted } from 'vue';
     import { useRoute } from 'vue-router';
-    import { formatCurrency, formatDate, formatBalance } from '../utils/utils.js';
+    import {
+        formatCurrency,
+        formatDate,
+        formatBalance,
+    } from '../utils/utils.js';
     import AddTransactionModal from '../components/AddTransactionModal.vue';
     import { useAccounts } from '../composables/useAccounts.js';
 
@@ -81,6 +88,15 @@
     const loading = ref(true);
     const showModal = ref(false);
     const { balance, refreshBalance } = useAccounts(parseInt(accountId.value));
+
+    const headers = [
+        { title: 'Date', key: 'transaction_date', value: 'transaction_date' },
+        { title: 'Description', key: 'description', value: 'description' },
+        { title: 'Category', key: 'category_id', value: 'category_id'},
+        { title: 'Type', key: 'transaction_type', value: 'transaction_type'}, 
+        { title: 'Amount', key: 'amount_cents', value: 'amount_cents', align: 'end' },
+        { title: 'Actions', key: 'actions', sortable: false}
+    ];
 
     const fetchAccountName = async () => {
         try {
@@ -128,15 +144,6 @@
         margin: 0 auto;
     }
 
-    .account-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 32px;
-        padding-bottom: 24px;
-        border-bottom: 1px solid var(--border-dim);
-    }
-
     .balance-display {
         text-align: right;
         margin-bottom: 12px;
@@ -153,26 +160,6 @@
         font-size: 24px;
         font-weight: 600;
         color: var(--text);
-    }
-
-    .add-transaction-btn {
-        background: var(--accent);
-        color: var(--on-accent);
-        border: none;
-        padding: 12px 20px;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-    }
-
-    .add-transaction-btn:hover {
-        background: var(--accent-hover);
-    }
-
-    .add-transaction-btn:active {
-        background: var(--accent-active);
     }
 
     .transactions {

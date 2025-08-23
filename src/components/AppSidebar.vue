@@ -10,7 +10,7 @@
         <v-divider thickness="2" />
         <v-list-subheader title="Accounts" class="text-uppercase" />
         <AccountNavItem
-            v-for="account in accounts"
+            v-for="account in accountsWithBalances"
             :key="account.id"
             :account-name="account.name"
             :account-balance="account.balance"
@@ -20,11 +20,13 @@
 </template>
 
 <script setup>
-    import { ref, onMounted } from 'vue';
+    import { ref, onMounted, computed } from 'vue';
     import { invoke } from '@tauri-apps/api/core';
     import AccountNavItem from './AccountNavItem.vue';
+    import { useAccounts } from '../composables/useAccounts.js';
 
     const accounts = ref([]);
+    const { balances, getBalance } = useAccounts();
 
     onMounted(() => {
         getAccounts();
@@ -36,9 +38,7 @@
 
             // Fetch balance for each account
             for (let account of accountList) {
-                account.balance = await invoke('get_balance', {
-                    accountId: account.id,
-                });
+                await getBalance(account.id);
             }
 
             accounts.value = accountList;
@@ -46,6 +46,13 @@
             console.error('Failed to load accounts:', error);
         }
     };
+
+    const accountsWithBalances = computed(() => {
+        return accounts.value.map((account) => ({
+            ...account,
+            balance: balances[account.id] || 0,
+        }));
+    });
 </script>
 
 <style scoped></style>

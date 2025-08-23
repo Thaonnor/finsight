@@ -71,15 +71,16 @@
     import { useRoute } from 'vue-router';
     import { formatCurrency, formatDate, formatBalance } from '../utils/utils.js';
     import AddTransactionModal from '../components/AddTransactionModal.vue';
+    import { useAccounts } from '../composables/useAccounts.js';
 
     const route = useRoute();
 
     const accountId = computed(() => route.params.id);
     const accountName = ref('');
     const transactions = ref([]);
-    const balance = ref(0);
     const loading = ref(true);
     const showModal = ref(false);
+    const { balance, refreshBalance } = useAccounts(parseInt(accountId.value));
 
     const fetchAccountName = async () => {
         try {
@@ -107,26 +108,15 @@
         }
     };
 
-    const fetchBalance = async () => {
-        try {
-            let result = await invoke('get_balance', {
-                accountId: parseInt(accountId.value),
-            });
-            balance.value = result;
-        } catch (error) {
-            console.error('Error fetching balance:', error);
-        }
-    };
-
     onMounted(async () => {
         await fetchAccountName();
         await fetchTransactions();
-        await fetchBalance();
+        await refreshBalance(parseInt(accountId.value));
     });
 
     const handleTransactionAdded = async () => {
         await fetchTransactions();
-        await fetchBalance();
+        await refreshBalance(parseInt(accountId.value));
         showModal = false;
     };
 </script>

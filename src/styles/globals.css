@@ -25,6 +25,8 @@
     --positive: #4CC38A;
     --negative: #FF7A8A;
     --warning: #F5B947;
+
+    overflow-y: hidden;
 }
 
 /* base styling */

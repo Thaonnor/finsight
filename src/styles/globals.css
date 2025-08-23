@@ -62,4 +62,8 @@ small {
     color: var(--text-dim);
 }
 
+.v-btn {
+    text-transform: none !important;
+}
+
 

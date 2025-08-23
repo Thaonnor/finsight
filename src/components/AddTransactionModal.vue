@@ -110,6 +110,7 @@
             await invoke('add_transaction', payload);
 
             emit('transactionAdded');
+            emit('close');
         } catch (error) {
             console.error('Failed to add transaction:', error);
         }

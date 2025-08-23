@@ -126,6 +126,7 @@
 
     const handleTransactionAdded = async () => {
         await fetchTransactions();
+        await fetchBalance();
         showModal = false;
     };
 </script>

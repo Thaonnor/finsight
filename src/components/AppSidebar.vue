@@ -7,9 +7,9 @@
         <v-list-item to="/accounts" title="Accounts" />
         <v-list-item to="/categories" title="Categories" />
         <v-list-item to="/import" title="Import" />
-        <v-divider thickness="2"/>
-        <v-list-subheader title="Accounts" class="text-uppercase"/>
-        <AccountNavItem 
+        <v-divider thickness="2" />
+        <v-list-subheader title="Accounts" class="text-uppercase" />
+        <AccountNavItem
             v-for="account in accounts"
             :key="account.id"
             :account-name="account.name"
@@ -25,6 +25,10 @@
     import AccountNavItem from './AccountNavItem.vue';
 
     const accounts = ref([]);
+
+    onMounted(() => {
+        getAccounts();
+    });
 
     const getAccounts = async () => {
         try {
@@ -42,44 +46,6 @@
             console.error('Failed to load accounts:', error);
         }
     };
-
-    onMounted(() => {
-        getAccounts();
-    });
 </script>
 
-<style scoped>
-    .sidebar {
-        width: 200px;
-        background: var(--surface-2);
-        color: var(--text);
-        padding: 20px;
-    }
-
-    .sidebar h1 {
-        color: var(--accent);
-    }
-
-    .sidebar ul {
-        list-style: none;
-        padding: 0;
-    }
-
-    .sidebar li {
-        margin: 10px 0;
-    }
-
-    .sidebar a {
-        color: var(--text);
-        text-decoration: none;
-        padding: 8px 12px;
-        border-radius: 4px;
-        display: block;
-        transition: background-color 0.2s ease;
-    }
-
-    .sidebar a:hover {
-        color: var(--accent);
-        background: var(--surface-1);
-    }
-</style>
+<style scoped></style>

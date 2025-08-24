@@ -34,7 +34,7 @@ const routes = [
         path: '/reports',
         name: 'Reports',
         // TODO: Implement reports view
-        component: () => import('../views/Dashboard.vue'),
+        component: () => import('../views/Reports.vue'),
     }
 ];
 

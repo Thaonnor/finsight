@@ -6,6 +6,7 @@
         <v-list-item to="/" title="Dashboard" />
         <v-list-item to="/accounts" title="Accounts" />
         <v-list-item to="/categories" title="Categories" />
+        <v-list-item to="/reports" title="Reports" />
         <v-list-item to="/import" title="Import" />
         <v-divider thickness="2" />
         <v-list-subheader title="Accounts" class="text-uppercase" />

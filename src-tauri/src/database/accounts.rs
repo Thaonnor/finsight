@@ -33,7 +33,7 @@ use sqlx::{Row, SqlitePool};
 /// }
 /// ```
 pub async fn get_all_accounts(pool: &SqlitePool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-    let accounts = sqlx::query("SELECT id, name, account_type, created_at FROM accounts")
+    let accounts = sqlx::query("SELECT id, name, account_type FROM accounts WHERE archived = FALSE")
         .fetch_all(pool)
         .await?;
 
@@ -237,7 +237,7 @@ mod tests {
             1,
             "Updated Name".to_string(),
             "savings".to_string(),
-            true,
+            false,
         )
         .await
         .unwrap();

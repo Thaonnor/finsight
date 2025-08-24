@@ -40,7 +40,7 @@ pub async fn get_transactions(
     pool: &SqlitePool,
     account_id: i64,
 ) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-    let transactions = sqlx::query("SELECT id, account_id, amount_cents, transaction_type, description, transaction_date, category_id FROM transactions WHERE account_id = ?").bind(account_id).fetch_all(pool).await?;
+    let transactions = sqlx::query("SELECT id, account_id, amount_cents, transaction_type, description, transaction_date, category_id FROM transactions WHERE account_id = ? ORDER BY transaction_date DESC").bind(account_id).fetch_all(pool).await?;
 
     let result: Vec<serde_json::Value> = transactions
         .into_iter()
@@ -69,8 +69,8 @@ pub async fn get_transactions(
 /// # Arguments
 /// * `pool` - SQLite connection pool reference for executing the insertion
 /// * `account_id` - Database ID of the account this transaction belongs to
-/// * `amount_cents` - Transaction amount in cents (always positive, e.g., 2550 for $25.50)
-/// * `transaction_type` - Either "debit" (reduces balance) or "credit" (increases balance)
+/// * `amount_cents` - Transaction amount in cents
+/// * `transaction_type` - Either "debit" or "credit"
 /// * `description` - Human-readable transaction description from bank data or user input
 /// * `transaction_date` - Transaction date in ISO 8601 format (YYYY-MM-DD)
 ///

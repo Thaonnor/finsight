@@ -269,7 +269,7 @@ async fn get_balance(db: tauri::State<'_, SqlitePool>, account_id: i64) -> Resul
 /// # Examples
 /// ```javascript
 /// // Load transactions for account detail view
-/// const transactions = await invoke('get_transactions_by_account', {
+/// const transactions = await invoke('get_transactions', {
 ///     accountId: 1
 /// });
 ///

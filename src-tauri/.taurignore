@@ -1,4 +1,2 @@
-finsight.db
-finsight.db-*
-*.db
-*.db-*
+ *.db
+  *.db-*

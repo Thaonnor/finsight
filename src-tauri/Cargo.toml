@@ -2,6 +2,8 @@
 name = "finsight"
 version = "0.1.0"
 edition = "2024"
+description = "A personal finance tracking application."
+license = "MIT"
 
 [build-dependencies]
 tauri-build = { version = "2.0", features = [] }

@@ -1,26 +1,34 @@
 {
     "name": "finsight",
     "version": "0.1.0",
+    "description": "A personal finance tracking app built with Vue 3 and Tauri",
+    "license": "MIT",
     "private": true,
     "scripts": {
         "dev": "vite",
+        "dev:tauri": "tauri dev",
         "build": "vite build",
-        "tauri": "tauri",
-        "tauri:dev": "tauri dev",
-        "docs": "cargo doc --manifest-path src-tauri/Cargo.toml --no-deps --open",
-        "test": "cargo test --manifest-path src-tauri/Cargo.toml"
+        "build:tauri": "tauri build",
+        "test": "cargo test --manifest-path src-tauri/Cargo.toml",
+        "docs:rust": "cargo doc --manifest-path src-tauri/Cargo.toml --no-deps --open",
+        "docs:js": "jsdoc -c jsdoc.json",
+        "clean": "powershell -Command \"Remove-Item -Recurse -Force -ErrorAction SilentlyContinue out, dist\"",
+        "clean:all": "powershell -Command \"Remove-Item -Recurse -Force -ErrorAction SilentlyContinue out, dist, node_modules\"",
+        "clean:cargo": "cargo clean --manifest-path src-tauri/Cargo.toml",
+        "tauri": "tauri"
     },
     "dependencies": {
         "@mdi/font": "^7.4.47",
         "@tauri-apps/api": "^2.7.0",
         "vite-plugin-vuetify": "^2.1.2",
         "vue": "^3.4.0",
-        "vue-router": "4.2.0",
+        "vue-router": "^4.2.0",
         "vuetify": "^3.9.5"
     },
     "devDependencies": {
         "@tauri-apps/cli": "^2.0.0",
         "@vitejs/plugin-vue": "^5.0.0",
-        "vite": "^5.0.0"
+        "vite": "^5.0.0",
+        "jsdoc": "^4.0.4"
     }
 }

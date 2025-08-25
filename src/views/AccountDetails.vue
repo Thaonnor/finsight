@@ -54,7 +54,7 @@
                     </template>
                     <template v-slot:item.actions="{ item }">
                         <v-btn icon="mdi-pencil" size="small" variant="text" />
-                        <v-btn icon="mdi-delete" size="small" variant="text" />
+                        <v-btn icon="mdi-delete" size="small" variant="text" @click="confirmDelete(item)"/>
                     </template>
                 </v-data-table>
             </v-col>
@@ -66,6 +66,22 @@
         @close="showModal = false"
         @transactionAdded="handleTransactionAdded"
     />
+    <v-dialog v-model="deleteDialog" max-width="400px">
+        <v-card>
+            <v-card-title>Delete Transaction</v-card-title>
+            <v-card-text v-if="transactionToDelete">
+                Are you sure you want to delete this transaction?
+                <br><br>
+                <strong>{{ transactionToDelete?.description }}</strong><br>
+                <strong>{{ formatCurrency(transactionToDelete.amount_cents) }}</strong>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer/>
+                <v-btn variant="outlined" @click="cancelDelete">Cancel</v-btn>
+                <v-btn color="error" variant="elevated" @click="deleteTransaction">Delete</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 </template>
 
 <script setup>
@@ -88,11 +104,13 @@
     const loading = ref(true);
     const showModal = ref(false);
     const { balance, refreshBalance } = useAccounts(parseInt(accountId.value));
+    const deleteDialog = ref(false);
+    const transactionToDelete = ref(null);
 
     const headers = [
         { title: 'Date', key: 'transaction_date', value: 'transaction_date' },
         { title: 'Description', key: 'description', value: 'description' },
-        { title: 'Category', key: 'category_id', value: 'category_id'},
+        { title: 'Category', key: 'category_name', value: 'category_name'},
         { title: 'Type', key: 'transaction_type', value: 'transaction_type'}, 
         { title: 'Amount', key: 'amount_cents', value: 'amount_cents', align: 'end' },
         { title: 'Actions', key: 'actions', sortable: false}
@@ -124,6 +142,32 @@
         }
     };
 
+    const confirmDelete = (transaction) => {
+        transactionToDelete.value = transaction;
+        deleteDialog.value = true;
+    }
+
+    const deleteTransaction = async () => {
+        try {
+            await invoke('delete_transaction', {
+                transactionId: transactionToDelete.value.id
+            });
+
+            await fetchTransactions();
+            await refreshBalance(parseInt(accountId.value));
+
+            deleteDialog.value = false;
+            transactionToDelete.value = null;
+        } catch (error) {
+            console.error('Error deleting transaction:', error);
+        }
+    }
+
+    const cancelDelete = () => {
+        deleteDialog.value = false;
+        transactionToDelete.value = null;
+    }
+
     onMounted(async () => {
         await fetchAccountName();
         await fetchTransactions();
@@ -138,91 +182,5 @@
 </script>
 
 <style scoped>
-    .account-details {
-        padding: 32px;
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-
-    .balance-display {
-        text-align: right;
-        margin-bottom: 12px;
-    }
-
-    .balance-label {
-        display: block;
-        font-size: 14px;
-        color: var(--text-dim);
-    }
-
-    .balance-amount {
-        display: block;
-        font-size: 24px;
-        font-weight: 600;
-        color: var(--text);
-    }
-
-    .transactions {
-        width: 100%;
-        border-collapse: collapse;
-        background: var(--surface-1);
-        border-radius: 8px;
-        overflow: hidden;
-    }
-
-    .transactions th {
-        background: var(--surface-2);
-        color: var(--text);
-        font-weight: 500;
-        text-align: left;
-        padding: 16px;
-        font-size: 14px;
-        border-bottom: 1px solid var(--border);
-    }
-
-    .transactions td {
-        padding: 16px;
-        color: var(--text);
-        border-bottom: 1px solid var(--border-dim);
-    }
-
-    .transactions tr:last-child td {
-        border-bottom: none;
-    }
-
-    .transactions tr:hover {
-        background: var(--surface-2);
-    }
-
-    .amount-column {
-        text-align: right;
-        font-variant: tabular-nums;
-    }
-
-    .transactions th:nth-child(1) {
-        width: 100px;
-    }
-    .transactions th:nth-child(2) {
-        width: 40%;
-    }
-    .transactions th:nth-child(3) {
-        width: 120px;
-    }
-    .transactions th:nth-child(4) {
-        width: 80px;
-    }
-    .transactions th:nth-child(5) {
-        width: 120px;
-    }
-    .transactions th:nth-child(6) {
-        width: 80px;
-    }
-
-    .transactions .amount-positive {
-        color: var(--positive);
-    }
-
-    .transactions .amount-negative {
-        color: var(--negative);
-    }
+    
 </style>

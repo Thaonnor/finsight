@@ -11,7 +11,7 @@ use sqlx::{Row, SqlitePool};
 /// * `account_id` - Database ID of the account to retrieve transactions for
 ///
 /// # Returns
-/// * `Ok(Vec<serde_json::Value>)` - Array of transaction objects with id, account_id, amount_cents, description, and transaction_date
+/// * `Ok(Vec<serde_json::Value>)` - Array of transaction objects with id, account_id, amount_cents, description, transaction_date, category_id, and category_name
 /// * `Err(sqlx::Error)` - Database query or data extraction failure
 ///
 /// # Errors
@@ -32,6 +32,7 @@ use sqlx::{Row, SqlitePool};
 ///     println!("{}: {} - ${:.2}",
 ///         tx["transaction_date"].as_str().unwrap(),
 ///         tx["description"].as_str().unwrap(),
+///         tx["category_name"].as_str().unwrap_or("Unknown"),
 ///         amount_dollars
 ///     );
 /// }
@@ -40,7 +41,25 @@ pub async fn get_transactions(
     pool: &SqlitePool,
     account_id: i64,
 ) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-    let transactions = sqlx::query("SELECT id, account_id, amount_cents, transaction_type, description, transaction_date, category_id FROM transactions WHERE account_id = ? ORDER BY transaction_date DESC").bind(account_id).fetch_all(pool).await?;
+    let transactions = sqlx::query(
+        r#"SELECT 
+            t.id, 
+            t.account_id, 
+            t.amount_cents, 
+            t.transaction_type, 
+            t.description, 
+            t.transaction_date, 
+            t.category_id, 
+            c.name as category_name 
+            FROM transactions t 
+            LEFT JOIN categories c ON t.category_id = c.id 
+            WHERE t.account_id = ? 
+            ORDER BY t.transaction_date DESC
+        "#,
+    )
+    .bind(account_id)
+    .fetch_all(pool)
+    .await?;
 
     let result: Vec<serde_json::Value> = transactions
         .into_iter()
@@ -52,7 +71,8 @@ pub async fn get_transactions(
                 "transaction_type": row.get::<String, _>("transaction_type"),
                 "description": row.get::<String, _>("description"),
                 "transaction_date": row.get::<String, _>("transaction_date"),
-                "category_id": row.get::<i64, _>("category_id")
+                "category_id": row.get::<i64, _>("category_id"),
+                "category_name": row.get::<String, _>("category_name")
             })
         })
         .collect();
@@ -374,7 +394,7 @@ mod tests {
         .unwrap();
 
         delete_transaction(&pool, 1).await.unwrap();
-        
+
         let transactions = get_transactions(&pool, 1).await.unwrap();
         assert_eq!(transactions.len(), 0);
     }

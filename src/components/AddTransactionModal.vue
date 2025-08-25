@@ -33,10 +33,7 @@
                         v-model="categoryId"
                         label="Category"
                         variant="outlined"
-                        :items="[
-                            { title: 'Uncategorized', value: 1 },
-                            { title: 'Groceries', value: 2 },
-                        ]"
+                        :items="categories"
                         required
                     />
 
@@ -58,9 +55,11 @@
                 </v-form>
             </v-card-text>
             <v-card-actions>
-                <v-spacer/>
+                <v-spacer />
                 <v-btn variant="outlined" @click="$emit('close')">Cancel</v-btn>
-                <v-btn color="primary" variant="elevated" @click="handleSubmit">Add Transaction</v-btn>
+                <v-btn color="primary" variant="elevated" @click="handleSubmit"
+                    >Add Transaction</v-btn
+                >
             </v-card-actions>
         </v-card>
     </v-dialog>
@@ -83,11 +82,14 @@
     const amount = ref(null);
     const transactionType = ref('debit');
     const categoryId = ref(1);
+    const categories = ref([]);
     const description = ref('');
-    const transactionDate = ref(new Date().toISOString().split('T')[0]);
+    const transactionDate = ref(new Date().toLocaleDateString('en-CA'));
 
-    onMounted(() => {
+    onMounted(async () => {
         dialog.value = true;
+
+        fetchCategories();
     });
 
     const handleSubmit = async () => {
@@ -115,7 +117,19 @@
             console.error('Failed to add transaction:', error);
         }
     };
+
+    const fetchCategories = async () => {
+        try {
+            const fetchedCategories = await invoke('get_categories');
+            categories.value = fetchedCategories.map((category) => ({
+                title: category.name,
+                value: category.id,
+            }));
+        } catch (error) {
+            console.error('Failed to fetch categories:', error);
+            categories.value = [{ title: 'Uncategorized', value: 1 }];
+        }
+    }
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>
